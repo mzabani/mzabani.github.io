@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <title>Marcelo Zabani's Blog - Typeclass induction and developing a QuickCheck-like library</title>
+        <link rel="stylesheet" type="text/css" href="../css/default.css" />
+        <link rel="stylesheet" type="text/css" href="../css/syntax.css" />
+    </head>
+    <body>
+        <div id="header">
+            <div id="logo">
+                <a href="../">Marcelo Zabani's Blog</a>
+            </div>
+            <div id="navigation">
+                <a href="../">Home</a>
+                <!--<a href="/about.html">About</a>-->
+                <a href="../archive.html">Archive</a>
+            </div>
+        </div>
+
+        <div id="content">
+            <h1>Typeclass induction and developing a QuickCheck-like library</h1>
+
+            <div class="info">
+    Posted on August 13, 2018
+    
+</div>
+
+<h1 id="what-is-typeclass-induction">What is typeclass induction</h1>
+<p>In this post we’ll approach a technique called Typeclass induction, which allows us to take polymorphism to an entirely new level! Now, a typical typeclass will create a function that is able to handle a finite number of types - all the types that instantiate the typeclass. Typeclass induction, however, allows us to create a system in which an infinite amount of types could instantiate our typeclass (limited only by arbitrary compiler and memory limits, of course)!</p>
+<p>Now, why would we want something like this, anyway? Of course, there’s no utility in having an infinite amount of types instantiating a typeclass, but this same mechanism allows us to get things like types that admit a “recursive shape” to instantiate a typeclass. But what do I mean by recursive shape? Multiparameter functions admit a recursive shape, for example:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode haskell"><code class="sourceCode haskell"><a class="sourceLine" id="cb1-1" data-line-number="1"><span class="ot">twoArgumentFunction ::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Char</span> <span class="ot">-&gt;</span> <span class="dt">Bool</span></a></code></pre></div>
+<p>Since <code>(-&gt;) :: * -&gt; * -&gt; *</code> is a constructor for functions, <code>twoArgumentFunction</code> can also be seen as:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode haskell"><code class="sourceCode haskell"><a class="sourceLine" id="cb2-1" data-line-number="1"><span class="ot">twoArgumentFunction ::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> (<span class="dt">Char</span> <span class="ot">-&gt;</span> <span class="dt">Bool</span>)</a></code></pre></div>
+<p>And at last:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode haskell"><code class="sourceCode haskell"><a class="sourceLine" id="cb3-1" data-line-number="1"><span class="ot">twoArgumentFunction ::</span> (<span class="ot">-&gt;</span>) <span class="dt">Int</span> ((<span class="ot">-&gt;</span>) <span class="dt">Char</span> <span class="dt">Bool</span>)</a></code></pre></div>
+<p>The line above is valid Haskell, go ahead and try it!</p>
+<p>Now, do you see the recursive shape? We could take it a step further and get something like <code>threeArgumentFunction :: (-&gt;) Integer ((-&gt;) Int ((-&gt;) Char Bool))</code>. For an N-argument function, we’ll always have a shape such as</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode haskell"><code class="sourceCode haskell"><a class="sourceLine" id="cb4-1" data-line-number="1"><span class="ot">nArgumentFunction ::</span> (<span class="ot">-&gt;</span>) a1 ((<span class="ot">-&gt;</span>) a2 ((<span class="ot">-&gt;</span>) a3 ((<span class="ot">-&gt;</span>) <span class="fu">...</span> ((<span class="ot">-&gt;</span>) aN r))))<span class="fu">...</span>)</a></code></pre></div>
+<p>And with typeclass induction we could create a <code>Bool</code> typeclass that is instantiated by <code>twoArgumentFunction</code>, <code>threeArgumentFunction</code> and all possible <code>nArgumentFunction</code>s!</p>
+<h2 id="practical-utility">Practical utility</h2>
+<p>So why would we want to do this? Well, being able to pass an N-argument function is something we do when using <a href="http://hackage.haskell.org/package/QuickCheck">QuickCheck</a>, for instance! QuickCheck runs our test functions (with any number of arguments) generating random arguments and testing a property.</p>
+<p>Suppose we write a function called <code>even</code> which returns <code>True</code> for even numbers. We know that any integer times two is even and all numbers of the form <span class="math inline">2<em>n</em> − 1</span> are odd, so we could test our function with</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode haskell"><code class="sourceCode haskell"><a class="sourceLine" id="cb5-1" data-line-number="1">test (\n <span class="ot">-&gt;</span> even (n <span class="fu">*</span> <span class="dv">2</span>))</a>
+<a class="sourceLine" id="cb5-2" data-line-number="2">test (\n <span class="ot">-&gt;</span> not (even (n <span class="fu">*</span> <span class="dv">2</span> <span class="fu">-</span> <span class="dv">1</span>)))</a></code></pre></div>
+<p>And wih typeclass induction we could create mechanisms to call these two functions with many random integers while making sure it passes all checks, helping us increase our confidence that our implementation is sound.</p>
+<h2 id="coding-a-quickcheck-like-solution">Coding a QuickCheck-like solution</h2>
+<p>You could go ahead and look at the code for QuickCheck, but here I’d like to show you my first efforts in trying to create a <code>Testable</code> typeclass, so that we can learn two ways to do this and the differences between them. Either way, our final solution will be much, much simpler than QuickCheck - of course -, but it will still be impressive how little code we have to write in Haskell to get something reasonably powerful.</p>
+<p>Enough talk. Let’s give it a shot. The first attempt won’t generate random input data when testing a function; it will only know how to generate <code>Int</code> values of <code>37</code>. We want testable functions to instantiate <code>Testable</code>.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode haskell"><code class="sourceCode haskell"><a class="sourceLine" id="cb6-1" data-line-number="1"><span class="kw">class</span> <span class="dt">Gen</span> a <span class="kw">where</span></a>
+<a class="sourceLine" id="cb6-2" data-line-number="2"><span class="ot">    gen ::</span> a</a>
+<a class="sourceLine" id="cb6-3" data-line-number="3"></a>
+<a class="sourceLine" id="cb6-4" data-line-number="4"><span class="kw">instance</span> <span class="dt">Gen</span> <span class="dt">Int</span> <span class="kw">where</span></a>
+<a class="sourceLine" id="cb6-5" data-line-number="5">    gen <span class="fu">=</span> <span class="dv">37</span></a>
+<a class="sourceLine" id="cb6-6" data-line-number="6"></a>
+<a class="sourceLine" id="cb6-7" data-line-number="7"><span class="kw">class</span> <span class="dt">Testable</span> a <span class="kw">where</span></a>
+<a class="sourceLine" id="cb6-8" data-line-number="8"><span class="ot">    test ::</span> a <span class="ot">-&gt;</span> <span class="dt">Bool</span></a>
+<a class="sourceLine" id="cb6-9" data-line-number="9"></a>
+<a class="sourceLine" id="cb6-10" data-line-number="10"><span class="kw">instance</span> <span class="dt">Gen</span> a <span class="ot">=&gt;</span> <span class="dt">Testable</span> ((<span class="ot">-&gt;</span>) a <span class="dt">Bool</span>) <span class="kw">where</span></a>
+<a class="sourceLine" id="cb6-11" data-line-number="11">    test f <span class="fu">=</span> f gen</a></code></pre></div>
+<p>All right, but so far only one-argument functions can be used. That first instance of <code>Testable</code> is our <strong>base case</strong>, so let us code the <strong>inductive step</strong>.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode haskell"><code class="sourceCode haskell"><a class="sourceLine" id="cb7-1" data-line-number="1"><span class="kw">instance</span> (<span class="dt">Gen</span> a, <span class="dt">Testable</span> b) <span class="ot">=&gt;</span> <span class="dt">Testable</span> ((<span class="ot">-&gt;</span>) a b) <span class="kw">where</span></a>
+<a class="sourceLine" id="cb7-2" data-line-number="2">    test f <span class="fu">=</span> <span class="kw">let</span> x <span class="fu">=</span> f gen <span class="kw">in</span> test x</a></code></pre></div>
+<p>This looks really nice! It takes some time to digest it but try to pay attention to the recursive shape of this last instance. We generate data with <code>gen</code> and apply <code>f</code>, a one-parameter function, to it, then get the result of that, which is <code>Testable</code> itself and test it! This should be enough to capture N-argument functions. Let’s try loading this on GHCI:</p>
+<pre><code>• Illegal instance declaration for ‘Testable (a -&gt; Bool)’
+    (All instance types must be of the form (T a1 ... an)
+     where a1 ... an are *distinct type variables*,
+     and each type variable appears at most once in the instance head.
+     Use FlexibleInstances if you want to disable this.)
+• In the instance declaration for ‘Testable ((-&gt;) a Bool)’</code></pre>
+<p>Ok, so we need to use <a href="https://downloads.haskell.org/~ghc/latest/docs/html/users_guide/glasgow_exts.html#extension-FlexibleInstances">FlexibleInstances</a> if we want to declare instances not in the strict form described in the error (for more context on this, see https://prime.haskell.org/wiki/FlexibleInstances). It seems to be a benign extension. Let’s just add <code>{-# LANGUAGE FlexibleInstances #-}</code>, reload it and let’s test a simple function with it.</p>
+<pre><code>*First&gt; let equals37 n = n == (37 :: Int)
+*First&gt; test equals37
+
+&lt;interactive&gt;:6:1: error
+• Overlapping instances for Testable (Int -&gt; Bool)
+    arising from a use of ‘test’
+  Matching instances
+    instance [safe] (Gen a, Testable b) =&gt; Testable (a -&gt; b)
+      -- Defined at First.hs:16:10
+    instance [safe] Gen a =&gt; Testable (a -&gt; Bool)
+      -- Defined at First.hs:13:10
+• In the expression: test equals37
+  In an equation for ‘it’: it = test equals37</code></pre>
+<p>Oh no.. it’s saying it doesn’t know which of our instances to apply to <code>equals37</code>. But it should be able to! Because for <code>equals37 :: Int -&gt; Bool</code> to match our <code>instance (Gen a, Testable b) =&gt; Testable ((-&gt;) a b)</code> instance would mean <code>a ~ Int</code> and <code>b ~ Bool</code>, but <code>Bool</code> is not <code>Testable</code>!</p>
+<p>So why is this happening? Well, according to <a href="https://downloads.haskell.org/~ghc/8.2.2/docs/html/users_guide/glasgow_exts.html#instance-resolution">GHC’s manual</a>, GHC’s instance resolution does not consider contexts (the contraints before <code>=&gt;</code>) when resolving which instance to apply. The two instances look like <code>instance Testable ((-&gt;) a Bool)</code> and <code>instance Testable ((-&gt;) a b)</code> to GHC, and because of that they both match <code>equals37</code>.</p>
+<p>To be honest, I was a little frustrated by this and it took me some time to find the instance resolution algorithm’s specifics that explain the error. Of course, Haskell’s developers are really smart, so there must be either a historical reason or some non-termination issue with instance resolution if it were to consider contexts (or something else, who knows). But at least I had the opportunity to learn about <code>{-# Overlapping #-}</code>, which is almost self-explanatory: should the compiler find more than one matching instance, choose the one marked with <em>Overlapping</em>. Let’s change our instance to the following:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode haskell"><code class="sourceCode haskell"><a class="sourceLine" id="cb10-1" data-line-number="1"><span class="kw">instance</span> <span class="ot">{-# Overlapping #-}</span> <span class="dt">Gen</span> a <span class="ot">=&gt;</span> <span class="dt">Testable</span> ((<span class="ot">-&gt;</span>) a <span class="dt">Bool</span>) <span class="kw">where</span></a>
+<a class="sourceLine" id="cb10-2" data-line-number="2">    test f <span class="fu">=</span> f gen</a></code></pre></div>
+<p>Now reload it on GHCI and try again. It will finally work, and it will work with N-argument functions too, as one can easily see:</p>
+<pre><code>*First&gt; let threeArgFunction a b c = a == (37 :: Int) &amp;&amp; b /= a &amp;&amp; c == a
+*First&gt; :t threeArgFunction
+threeArgFunction :: Int -&gt; Int -&gt; Int -&gt; Bool
+*First&gt; test threeArgFunction</code></pre>
+<h2 id="doing-this-without-using---overlapping--">Doing this without using <code>{-# Overlapping #-}</code></h2>
+<p>Using <code>{-# Overlapping #-}</code> doesn’t feel so good, of course. Is there another way?</p>
+<p>It turns out there is, but our <code>Testable</code> type class will no longer apply <strong>only</strong> to <code>Bool</code>-returning functions. It will also apply to <code>Bool</code> itself:</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode haskell"><code class="sourceCode haskell"><a class="sourceLine" id="cb12-1" data-line-number="1"><span class="kw">instance</span> <span class="dt">Testable</span> <span class="dt">Bool</span> <span class="kw">where</span></a>
+<a class="sourceLine" id="cb12-2" data-line-number="2">    test x <span class="fu">=</span> x</a>
+<a class="sourceLine" id="cb12-3" data-line-number="3"></a>
+<a class="sourceLine" id="cb12-4" data-line-number="4"><span class="kw">instance</span> (<span class="dt">Gen</span> a, <span class="dt">Testable</span> b) <span class="ot">=&gt;</span> <span class="dt">Testable</span> ((<span class="ot">-&gt;</span>) a b) <span class="kw">where</span></a>
+<a class="sourceLine" id="cb12-5" data-line-number="5">    test f <span class="fu">=</span> <span class="kw">let</span> f' <span class="fu">=</span> f gen <span class="kw">in</span> test f'</a></code></pre></div>
+<p>Change only these two instances and there’s no longer any need for <code>FlexibleInstances</code> nor <code>{-# Overlapping #-}</code>, but now you can also test <code>Bool</code> if you want, something I wanted to avoid since it’s kind of nonsensical to me (but not such a terrible consequence, to be honest).</p>
+<p>Anyways, let’s add some random numbers to get our final solution! We’ll throw away the <code>Gen</code> type class and use <code>Random</code> directly instead. I wouldn’t recommend this approach as a good solution, since you’d need to create orphan instances for types such as <code>String</code> or others that don’t instantiate <code>Random</code>; we’re using it here just for the sake of brevity.</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode haskell"><code class="sourceCode haskell"><a class="sourceLine" id="cb13-1" data-line-number="1"><span class="kw">module</span> <span class="dt">ZabaCheck</span> <span class="kw">where</span></a>
+<a class="sourceLine" id="cb13-2" data-line-number="2"><span class="kw">import</span> <span class="dt">System.Random</span></a>
+<a class="sourceLine" id="cb13-3" data-line-number="3"></a>
+<a class="sourceLine" id="cb13-4" data-line-number="4"><span class="kw">class</span> <span class="dt">Testable</span> a <span class="kw">where</span></a>
+<a class="sourceLine" id="cb13-5" data-line-number="5"><span class="ot">    testWith ::</span> <span class="dt">RandomGen</span> g <span class="ot">=&gt;</span> g <span class="ot">-&gt;</span> a <span class="ot">-&gt;</span> (<span class="dt">Bool</span>, g)</a>
+<a class="sourceLine" id="cb13-6" data-line-number="6"></a>
+<a class="sourceLine" id="cb13-7" data-line-number="7"><span class="kw">instance</span> <span class="dt">Testable</span> <span class="dt">Bool</span> <span class="kw">where</span></a>
+<a class="sourceLine" id="cb13-8" data-line-number="8">    testWith g x <span class="fu">=</span> (x, g)</a>
+<a class="sourceLine" id="cb13-9" data-line-number="9"></a>
+<a class="sourceLine" id="cb13-10" data-line-number="10"><span class="kw">instance</span> (<span class="dt">Random</span> a, <span class="dt">Testable</span> b) <span class="ot">=&gt;</span> <span class="dt">Testable</span> ((<span class="ot">-&gt;</span>) a b) <span class="kw">where</span></a>
+<a class="sourceLine" id="cb13-11" data-line-number="11">    testWith g f <span class="fu">=</span> <span class="kw">let</span> (param, nextG) <span class="fu">=</span> random g <span class="kw">in</span> testWith nextG (f param)</a>
+<a class="sourceLine" id="cb13-12" data-line-number="12"></a>
+<a class="sourceLine" id="cb13-13" data-line-number="13"><span class="ot">test ::</span> <span class="dt">Testable</span> a <span class="ot">=&gt;</span> a <span class="ot">-&gt;</span> <span class="dt">Bool</span></a>
+<a class="sourceLine" id="cb13-14" data-line-number="14">test f <span class="fu">=</span> and <span class="fu">$</span> fst <span class="fu">$</span> foldl (\(resList, g) _ <span class="ot">-&gt;</span> <span class="kw">let</span> (res, g') <span class="fu">=</span> testWith g f <span class="kw">in</span> (res <span class="fu">:</span> resList, g')) ([], mkStdGen <span class="dv">0</span>) [<span class="dv">1</span><span class="fu">..</span><span class="dv">100</span>]</a></code></pre></div>
+<p>Our <code>test</code> function tests the input function 100 times, weaving <code>RandomGen</code> through every randomly generated parameter. And this, my friends, is a 14-line property checking library (counting empty lines) written using typeclass induction. Again, it always amazes me how Haskell can be concise and extremely powerful at the same time.</p>
+<p>I hope you liked this post. Suggestions and corrections are very very welcome.</p>
+
+<div id="disqus_thread"></div>
+<script>
+
+/**
+*  RECOMMENDED CONFIGURATION VARIABLES: EDIT AND UNCOMMENT THE SECTION BELOW TO INSERT DYNAMIC VALUES FROM YOUR PLATFORM OR CMS.
+*  LEARN WHY DEFINING THESE VARIABLES IS IMPORTANT: https://disqus.com/admin/universalcode/#configuration-variables*/
+
+var disqus_config = function () {
+this.page.url = 'https://mzabani.github.io/posts/2018-08-13.html';  // Replace PAGE_URL with your page's canonical URL variable
+this.page.identifier = '/posts/2018-08-13.html'; // Replace PAGE_IDENTIFIER with your page's unique identifier variable
+this.page.title = 'Typeclass induction and developing a QuickCheck-like library';
+};
+
+(function() { // DON'T EDIT BELOW THIS LINE
+var d = document, s = d.createElement('script');
+s.src = '//mzabani.disqus.com/embed.js';
+s.setAttribute('data-timestamp', +new Date());
+(d.head || d.body).appendChild(s);
+})();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+        </div>
+        <div id="footer">
+            Site proudly generated by
+            <a href="http://jaspervdj.be/hakyll">Hakyll</a>
+        </div>
+    </body>
+</html>
