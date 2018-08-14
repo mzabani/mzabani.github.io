@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <title>Marcelo Zabani's Blog - One equality operator to rule them all</title>
+        <link rel="stylesheet" type="text/css" href="../css/default.css" />
+        <link rel="stylesheet" type="text/css" href="../css/syntax.css" />
+    </head>
+    <body>
+        <div id="header">
+            <div id="logo">
+                <a href="../">Marcelo Zabani's Blog</a>
+            </div>
+            <div id="navigation">
+                <a href="../">Home</a>
+                <!--<a href="/about.html">About</a>-->
+                <a href="../archive.html">Archive</a>
+            </div>
+        </div>
+
+        <div id="content">
+            <h1>One equality operator to rule them all</h1>
+
+            <div class="info">
+    Posted on January  2, 2018
+    
+</div>
+
+<h1 id="two-kinds-of-equality">Two kinds of equality</h1>
+<p>In a lot of programming languages there are two different concepts for equality: Reference equality (also called Identity) and Value equality.</p>
+<p>Reference equality is the same as equality of memory addresses. Two objects are the same if they are the same instance (iif they occupy the same address in memory).</p>
+<p>Value equality is semantic equality. Two objects are equal if the values in them mean the same thing. For example: two instances of IPAddress that represent the address “127.0.0.1” are equal even if they have been instantiated in different places.</p>
+<p><strong>My plan with this article is to convince you that there should only be one equality operator.</strong> Let me make my point.</p>
+<p><strong>First:</strong> There should be a null-safe equality operator.*</p>
+<ul>
+<li>This means that a language should have some means of comparing objects which won’t throw when a null reference gets compared. For most languages this is the == operator. The Equals instance method is problematic because you have to null check your object first (and you will end up forgetting to do so eventually).</li>
+</ul>
+<p>*: It would be much better if we removed null references from all modern languages for good, but let’s leave it at that for now.</p>
+<p><strong>Second:</strong> Boxing and two kinds of equality are a dangerous mix.</p>
+<ul>
+<li>This is very clear when we realize that <code>1 == 1</code> but <code>(object)1 != (object)1</code>. This is just a problem waiting to happen, really.</li>
+</ul>
+<p>*: Of course, you should really rethink your code if you’re operating on boxed objects. At least in C#, creating generic (as in polymorphic) code is almost certainly the better approach.</p>
+<p><strong>Third:</strong> In many cases, reference equality is simply misleading.</p>
+<ul>
+<li>In C#, for instance, <code>IPAddress.Parse(&quot;127.0.0.1&quot;) != IPAddress.Parse(&quot;127.0.0.1&quot;)</code>. Any type that conveys meaning will be thought of according to that assigned meaning. Unless you’re tracking instances, reference equality is far more confusing than it is useful.</li>
+</ul>
+<p><strong>Fourth:</strong> More generally and more importantly, having the same operator mean two different things is dangerous.</p>
+<ul>
+<li>Why? Well, what does <code>==</code> really mean?</li>
+</ul>
+<p><code>==</code> means Maybe Reference Equality, Maybe Value Equality. <code>==</code> can mean two distinct things depending on what gets compared, but with one unique form/appearance.</p>
+<p>And this can’t be good. <code>+</code> is addition for numbers and concatenating for strings, but the signatures are so different that it is hard to get it wrong. What would you think of <code>+</code> if it were addition for integral number types such as <code>Int</code> and <code>Long</code> but meant addition with rounding for fractionals such as <code>Float</code> and <code>Double</code> (we would make a proper Add method available, obviously)? I’m sure you would think it is an error waiting to happen.</p>
+<p>All previous cases would be more or less solved if we created a clear separation of equality operators. Kotlin, for example, has <code>==</code> for value equality and <code>===</code> for reference equality. I would like to convince you, however, that we only need one kind of equality for general use, and that reference equality should only be used to implement this equality operator that I propose. For that, let us explore a more interesting case:</p>
+<h2 id="an-interesting-case-the-socket-class">An interesting case: the Socket class</h2>
+<p>When working with multiple Sockets, it is often necessary to compare them to one another. Now, two sockets connected to the same address in the same port aren’t equal because they are independent communication channels, so wouldn’t value equality spoil that?</p>
+<p>No, it wouldn’t. In fact these two sockets use different local ports. Even if the sockets aren’t connected nor have been modified yet, the operating system labels all these sockets to manage them internally. Of course, the operating system could use the memory address of the created socket internally, which would then be the socket’s label.</p>
+<p>But even in that case, we only need one equality operator. It just happens to be the case that it may be implemented by comparing memory addresses in this case. Sockets just happen to be a case where it is desirable to make equality be Reference Equality. It is a case where semantics matches identity. So in our implementation of <code>==</code> for Socket we could then use <code>object.ReferenceEquals</code>. So do note that Reference equality would only be used to properly implement our beloved equality operator.</p>
+<p><strong>Ok.. These examples are good, but aren’t there exceptions?</strong></p>
+<p>I believe not. Although of course I can’t provide a formal proof, there is one thing I do know: there is only one kind of equality in Haskell, and Haskell has been used a lot already. I wouldn’t be surprised if other languages do the same.</p>
+<p><strong>How do we fix this in C# ?</strong></p>
+<p>Sadly, I don’t believe it is possible without changing the language substantially and breaking existing code. What I propose below is the least invasive set of changes I can think of for the language, and it is certainly <strong>not pretty</strong>. There are better ways around this problem.*</p>
+<p><em>Proposed breaking change:</em> We could make the <code>==</code> operator non overridable and make its implementation always use the Equals instance method of its left-most non null argument (after proper null checks).</p>
+<p>One could argue that choosing the left-most argument would make this implementation asymmetric. However, any correct implementation for equality is necessarily symmetric (if <code>a == b</code> then <code>b == a</code>), so it wouldn’t matter if the implementation picked the left-most argument to call <code>Equals</code> on it. Also, we could go ahead and change <code>==</code> to a generic <code>==&lt;T&gt;(T a, T b)</code> to make this a non-issue. This would break even more code and I’m not sure how all of this would sound to language designers, though. Also, there is some concern over efficiency. Calling a virtual method like Equals would involve dynamic dispatch, bringing its associated costs with it. I believe this is unavoidable.*</p>
+<p>*: Unless we are willing to go even further with our breaking changes. There is a proposal to implement type classes in C# <a href="https://github.com/dotnet/csharplang/issues/110" class="uri">https://github.com/dotnet/csharplang/issues/110</a>. Type classes enable a high level of ad-hoc polymorphism while maintaining static dispatch. They are a great feature and one I vouch for strongly. If you’re curious, read my article on it. With type classes, we could make <code>==</code> an operator/function of some <code>Equatable&lt;T&gt;</code> type class. We would then make its default implementation like the one described above, while still being overridable so that we can override it for some types to avoid calling <code>Equals</code>.</p>
+<p>So.. what are your thoughts on this? Do you have counter-examples or do you disagree on some issue? Can you think of more unintended consequences by changing the language as I proposed (I’m sure there are many!)?</p>
+<p><strong>EDIT (2018-01-06 14:40):</strong> I’m not sure how I missed this, but the new feature of nullable reference types makes my proposed language changes mostly unnecessary. It is also a breaking change, of course, but not only does it improve the language significantly, it also improves the state of equality. After opting in for this new feature, just make sure you never use <code>==</code> again. Stick to <code>Equals</code> and you should mostly be fine. I say “mostly” because not even <code>Equals</code> is always overridden to mean value equality. In the case of <code>StringBuilder</code>, for instance, its <code>Equals(object)</code> is inherited from <code>Object</code> and tests for reference equality while its <code>IEquatable&lt;StringBuilder&gt;.Equals(StringBuilder)</code> method tests for value equality. I believe this only strengthens the claim that there should be a single general purpose equality operator, keeping reference equality only as a means to implement equality in some cases.</p>
+
+<div id="disqus_thread"></div>
+<script>
+
+/**
+*  RECOMMENDED CONFIGURATION VARIABLES: EDIT AND UNCOMMENT THE SECTION BELOW TO INSERT DYNAMIC VALUES FROM YOUR PLATFORM OR CMS.
+*  LEARN WHY DEFINING THESE VARIABLES IS IMPORTANT: https://disqus.com/admin/universalcode/#configuration-variables*/
+
+var disqus_config = function () {
+this.page.url = 'https://mzabani.github.io/posts/2018-01-02.html';  // Replace PAGE_URL with your page's canonical URL variable
+this.page.identifier = '/posts/2018-01-02.html'; // Replace PAGE_IDENTIFIER with your page's unique identifier variable
+this.page.title = 'One equality operator to rule them all';
+};
+
+(function() { // DON'T EDIT BELOW THIS LINE
+var d = document, s = d.createElement('script');
+s.src = '//mzabani.disqus.com/embed.js';
+s.setAttribute('data-timestamp', +new Date());
+(d.head || d.body).appendChild(s);
+})();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+        </div>
+        <div id="footer">
+            Site proudly generated by
+            <a href="http://jaspervdj.be/hakyll">Hakyll</a>
+        </div>
+    </body>
+</html>
