@@ -2,6 +2,15 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
     <head>
+        <!-- Global site tag (gtag.js) - Google Analytics -->
+        <script async src="https://www.googletagmanager.com/gtag/js?id=UA-127959762-1"></script>
+        <script>
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+
+            gtag('config', 'UA-127959762-1');
+        </script>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
         <title>Marcelo Zabani's Blog - Investment strategies, lazy evaluation and memoization</title>
         <link rel="stylesheet" type="text/css" href="../css/default.css" />
@@ -60,7 +69,7 @@
 <div class="sourceCode" id="cb1"><pre class="sourceCode haskell"><code class="sourceCode haskell"><a class="sourceLine" id="cb1-1" data-line-number="1">repeat<span class="ot"> ::</span> a <span class="ot">-&gt;</span> [a]</a>
 <a class="sourceLine" id="cb1-2" data-line-number="2">repeat x <span class="fu">=</span> x <span class="fu">:</span> repeat x</a></code></pre></div>
 <p>What happens here is that the function repeat takes an object of some type a and returns a possibly infinite list of a. The list will grow in size as more elements of it are demanded by evaluation. Let us take this idea to implement our bestStrategyFunctionBad:</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode haskell"><code class="sourceCode haskell"><a class="sourceLine" id="cb2-1" data-line-number="1"><span class="co">-- We use the &quot;investment&quot; below to make sure the algorithm always returns some strategy, even if it means leaving you money in the bank</span></a>
+<div class="sourceCode" id="cb2"><pre class="sourceCode haskell"><code class="sourceCode haskell"><a class="sourceLine" id="cb2-1" data-line-number="1"><span class="co">-- We use the &quot;investment&quot; below to make sure the algorithm always returns some strategy, even if it means leaving your money in the bank</span></a>
 <a class="sourceLine" id="cb2-2" data-line-number="2"><span class="ot">investmentLeaveInTheBank ::</span> <span class="dt">Investment</span></a>
 <a class="sourceLine" id="cb2-3" data-line-number="3">investmentLeaveInTheBank <span class="fu">=</span> <span class="dt">Investment</span> { name <span class="fu">=</span> <span class="st">&quot;Leave it in the bank account&quot;</span>, rate <span class="fu">=</span> <span class="dv">0</span>, taxes <span class="fu">=</span> <span class="fl">0.0</span>, time <span class="fu">=</span> <span class="dv">1</span> }</a>
 <a class="sourceLine" id="cb2-4" data-line-number="4"> </a>

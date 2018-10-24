@@ -2,6 +2,15 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
     <head>
+        <!-- Global site tag (gtag.js) - Google Analytics -->
+        <script async src="https://www.googletagmanager.com/gtag/js?id=UA-127959762-1"></script>
+        <script>
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+
+            gtag('config', 'UA-127959762-1');
+        </script>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
         <title>Marcelo Zabani's Blog - Interfaces and typeclasses: Number APIs in C# and Haskell</title>
         <link rel="stylesheet" type="text/css" href="../css/default.css" />
@@ -126,7 +135,7 @@ ghci&gt; :l Numeric.hs
 [-1,0,7]
 *Numeric&gt; :t difs
 difs :: [Integer]</code></pre>
-<p>C# is great and a lot of what we achieved with Haskell could be achieved through an <code>ISubtractive&lt;T, T2, TResult&gt;</code>, if only we could make existing types implement it. We could also create structs that simply wrap existing types and write implicit coercion rules from (and to) them, making these new types implement our custom interfaces, and make a lot of things possible with that, but we wouldn’t be able to pass an instance of <code>IEnumerable</code> as a replacement for a <code>IEnumerable</code> without explicit casting, for example, and we’d also have to watch out and stay away from built-in arithmetic operators, since they might no longer obey the relations between types specified through the interfaces (we might want <code>int + int = BigInteger</code>).</p>
+<p>C# is great and a lot of what we achieved with Haskell could be achieved through an <code>ISubtractive&lt;T, T2, TResult&gt;</code>, if only we could make existing types implement it. We could also create structs that simply wrap existing types and write implicit coercion rules from (and to) them, making these new types implement our custom interfaces, and make a lot of things possible with that, but we wouldn’t be able to pass an instance of <code>IEnumerable&lt;WrapperType&gt;</code> as a replacement for a <code>IEnumerable&lt;WrappedType&gt;</code> without explicit casting, for example, and we’d also have to watch out and stay away from built-in arithmetic operators, since they might no longer obey the relations between types specified through the interfaces (we might want <code>int + int = BigInteger</code>).</p>
 <p>So that’s it. I hope you’ve enjoyed your reading, but most of all I hope any C# or Java (or any other mainstream language) developer that reads this gives Haskell a shot. It really is an amazing language.</p>
 <p>Any comments and corrections are very welcome!</p>
 

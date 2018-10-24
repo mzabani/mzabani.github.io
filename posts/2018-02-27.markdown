@@ -1,0 +1,162 @@
+---
+title: Investment strategies, lazy evaluation and memoization
+published: 2018-02-27
+---
+
+The problem
+===
+
+This article will cover an interesting problem: given a set of possible investments, each with different tax rates, yearly rates and minimum time until withdrawal, what is the best investment strategy for the next 10, 20 or $n$ years?
+
+For instance, given the following investments:
+
+- $i_1 = 9\%$ yearly rate, 25% taxes on profits upon withdrawal 1 year later  
+- $i_2 = 8\%$ yearly rate, 15% taxes on profits upon withdrawal 5 years later  
+- $i_3 = 7\%$ yearly rate, 0% taxes and withdrawal 3 years later
+
+If we want to maximize earnings over 10 years, should we purchase $i_1$ ten times, $i_2$ twice, $i_3$ three times and one $i_1$, $i_3$ once and $i_2$ once and $i_1$ twice or some other combination?
+
+Before we go into programming, let's do some basic math/algorithms. This is all simple math, so don't worry. You can also skip to **programming** if you prefer.
+
+**Theorem 1**: The final value to withdraw with any investment i such as the ones exemplified can be written as product of the initial value and a factor defined by the investment i, $e(i) = 1 + (1 - taxes) \cdot ((1 + yearlyRate)^{time} - 1)$
+
+**Proof**: Given some initial value v and composite yearly interest rates r, investment time t and taxes on profits taxes:  
+$profitsBeforeTaxes = v \cdot (1 + r)^t - v = v \cdot ((1 + r)^t - 1)$  
+$profitsAfterTaxes = profitsBeforeTaxes \cdot (1 - taxes)$  
+$profitsAfterTaxes = v \cdot ((1 + r)^t - 1) \cdot (1 - taxes)$  
+$finalValue = v + profitsAfterTaxes = v + v \cdot ((1 + r)^t - 1) \cdot (1 - taxes)$  
+$finalValue = v \cdot (1 + ((1 + r)^t - 1) \cdot (1 - taxes))$
+
+The previous line proves the existence of the factor. Now, since $finalValue=v \cdot e(i)$:
+
+$e(i) = finalValue / v = 1 + (1 - taxes) \cdot ((1 + r)^t - 1)$
+
+**Theorem 2**: Given a set of possible investments and a deadline $n$, the best investment strategy $s_n=e(i_1) \cdot e(i_2) \cdot ... \cdot e(i_j)$, any sub-strategy contained in $s_n$ is the best strategy for the sum of the times of the investments contained in it.
+
+**Proof**: Without loss of generality, let us consider $s_n=s_a \cdot s_b$, with $a+b=n$ and $0<a<n$ and assume the contrary: $s_a$ is not the best strategy for time $a$, but $s_n$ is the best strategy for time $n$. So there must be $s'_a > s_a$, and that would mean $s'_n = s'_a \cdot s_b > s_n$, which contradicts $s_n$ being the best strategy. Therefore, there can be no $s'_a > s_a$ and $s_a$ is optimal.
+
+Programming
+---
+
+Maybe you skipped the last part, but don't worry. I'll just roll out the recursive solution to the problem. How do we describe the list of investments to be made that maximizes earnings after some time n?
+
+$s_0 = 1$
+$s_n = max \{s_1 \cdot s_{n-1}, s_2 \cdot s_{n-2}, ..., s_{n-1} \cdot s_1, i \}\text{, with } i =\text{ investment with largest }e(i)\text{ of all possible investments of } time=n$
+
+This basically means we test every possible combination, which is not very smart, of course. The advantage of finding a recursive solution is that we can compute and store calculations for use later on. This is what we call memoization.
+
+Also, we only need to check up to $s_{floor(n/2)} \cdot s_{n - floor(n/2)}$, since every other check is redundant.
+
+How do we implement this? In a procedural language we could use an array of size n and fill it up with all solutions from 0 to n. In Haskell we generally don't want to use mutable data structures nor do we want to specify the order of evaluation of things, so we must find another tool in the toolbox to do this; it turns out that lazy evaluation is just that!
+
+Lazy evaluation is, roughly speaking, a mechanism by which a value is only computed when required by some function. This means that we can define a data structure in terms of itself, and that it can even be infinite. Take the following example:
+
+``` haskell
+repeat :: a -> [a]
+repeat x = x : repeat x
+```
+
+What happens here is that the function repeat takes an object of some type a and returns a possibly infinite list of a. The list will grow in size as more elements of it are demanded by evaluation. Let us take this idea to implement our bestStrategyFunctionBad:
+
+``` haskell
+-- We use the "investment" below to make sure the algorithm always returns some strategy, even if it means leaving your money in the bank
+investmentLeaveInTheBank :: Investment
+investmentLeaveInTheBank = Investment { name = "Leave it in the bank account", rate = 0, taxes = 0.0, time = 1 }
+ 
+withMax :: Ord a => (b -> a) -> [b] -> Maybe b
+withMax f xs = snd maybeRes
+  where maybeRes = foldl' (\acc el ->case acc of
+    Just (maxVal, maxEl) -> let cmp = f el in if cmp > maxVal then Just (cmp, el) else acc
+    Nothing -> Just (f el, el)) Nothing xs
+
+withMax1 :: Ord a => (b -> a) -> b -> [b] -> b
+withMax1 f firstEl xs = snd $ foldl' (\acc@(maxVal, _) el -> let cmp = f el in if cmp > maxVal then (cmp, el) else acc) (f firstEl, firstEl) xs
+ 
+bestStrategyBad :: Int -> [Investment] -> [Investment]
+bestStrategyBad timeInYears invs' = go !! timeInYears
+  where invs = investmentLeaveInTheBank : invs'
+               factorStrategyBad is = product $ fmap factorInvestment is
+               bestStrat desiredTime = withMax1 factorStrategyBad (maybeToList (bestInvestmentWithTime desiredTime)) (allCombinations desiredTime)
+               bestInvestmentWithTime desiredTime = withMax factorInvestment $ filter (\i -> time i == desiredTime) invs
+               -- For desiredTime=7 "allCombinations" returns strategies e1 ++ e6, e2 ++ e5 and e3 ++ e4
+               allCombinations desiredTime = let halfTheTime = floor (fromIntegral desiredTime / 2)
+                                             in fmap (\i -> go !! i ++ go !! (desiredTime - i)) [1..halfTheTime]
+               go :: [[Investment]]
+               go = [] : fmap bestStrat [1..]
+```
+
+There is nothing magical about the code above. When demanding `go !! 20`, for instance, the function bestStrat will be called with the value $20$, which will demand all possible strategy investments (as defined by our equations). Demanding all combinations will once again require `go !! 19`, `go !! 18` and many others, which will repeat the process for a smaller $n$ (the fact that they are smaller is crucial for our recursion to converge).
+
+What is different from recursion in imperative languages is that go is not a function: it is a list whose values are lazily calculated. As values are demanded from it, they are calculated only once, so you don't have to worry about what order to evaluate things in. In C# this is sort of like a `List<Lazy<Investment[]>>`.
+
+This is nice! Still, there are two bad things about this solution:
+
+1. `go` is a list, so accessing `go !! n` is $O(n)$. If this were an array this would be better. We will not tackle this issue for now, but feel free to do so!  
+2. We are creating a large number of lists with the `(++)` function, not to mention that once we combine two strategies we have to go through every investment in the combined strategy to calculate its complete factor, when we could do better.  
+
+So now let's go and solve issue number 2.
+
+More lazy evaluation $\text{and a little abstraction}$  
+---
+
+So, how can we solve issue number 2?
+Combining two strategies leads to a strategy with a factor that is the product of the factors of each strategy. There is no need to concatenate lists to discover the best strategy of some given size. To avoid needless work, we need more lazy evaluation. Let's add some functions to our code and create the `bestStrategyGood` function:
+
+``` haskell
+data StrategyCalc = StrategyCalc [Investment] Double
+
+factorStrategyGood (StrategyCalc _ x) = x
+
+combine :: StrategyCalc -> StrategyCalc -> StrategyCalc
+combine (StrategyCalc s1 f1) (StrategyCalc s2 f2) = StrategyCalc (s1 ++ s2) (f1 * f2)
+
+bestStrategyGood :: Int -> [Investment] -> [Investment]
+bestStrategyGood timeInYears invs' = let StrategyCalc res _ = go !! timeInYears in res
+  where invs = investmentLeaveInTheBank : invs'
+               bestStrat desiredTime = withMax1 factorStrategyGood (bestInvestmentWithTimeOr1 desiredTime) (allCombinations desiredTime)
+               bestInvestmentWithTimeOr1 desiredTime = case withMax factorInvestment $ filter (\i -> time i == desiredTime) invs of
+                                                         Nothing -> StrategyCalc [] 1
+                                                         Just i -> StrategyCalc [i] (factorInvestment i)
+               -- For desiredTime=7 "allCombinations" returns strategies e1 ++ e6, e2 ++ e5 and e3 ++ e4
+               allCombinations desiredTime = let halfTheTime = floor (fromIntegral desiredTime / 2)
+                                             in fmap (\i -> combine (go !! i) (go !! (desiredTime - i))) [1..halfTheTime]
+               go :: [StrategyCalc]
+               go = StrategyCalc [] 1 : fmap bestStrat [1..]
+```
+
+
+Take your time to digest this: the list of investments in each `StrategyCalc` will only be evaluated when the caller needs it to be evaluated. However, the combine function will create a `StrategyCalc` whose factor is calculated in constant time when combining two strategies. In fact, you could even have the final factor of the optimal strategy without having ever constructed a non empty list. Nice!
+
+A little abstraction $\text{(skip to results if you prefer)}$
+---
+
+I thought a nice touch to finish this article would be to introduce an abstraction: the Monoid.
+
+A Monoid is just a fancy name for a binary operation that is associative and a value that is an identity for this operation. The Int type, the sum function (+) and the value $0$ (zero) form an instance of Monoid, for instance, since any number plus zero equals itself and $(a+b)+c=a+(b+c)$ for any $a, b, c$ of type Int.
+
+The same thing happens with investment strategies! So we can replace the combine function by the Monoidal append:
+
+``` haskell
+instance Monoid StrategyCalc where
+  mempty = StrategyCalc [] 1
+  mappend (StrategyCalc i1 f1) (StrategyCalc i2 f2) = StrategyCalc (i1 ++ i2) (f1 * f2)
+```
+
+Don't forget that `<>` is an infix alias for mappend!
+
+Results
+---
+
+When taking the code for bestStrategyGood and the three investments from the beginning of the article, let us devise the best strategy to maximize gains over the next 11 years:
+
+    $ ghci
+    $ :l Investments.hs
+    ghci> let availableInvestments = [ Investment { name = "Investment 1", rate = 0.09, taxes = 0.25, time = 1 }
+                                     , Investment { name = "Investment 2", rate = 0.08, taxes = 0.15, time = 5 }
+                                     , Investment { name = "Investment 3", rate = 0.07, taxes = 0, time = 3 } ]
+    ghci> fmap name $ bestStrategyGood 11 availableInvestments
+    ["Investment 3","Investment 3","Investment 2"]
+
+So it seems that buying investment 3, rebuying it and then buying investment 2 is the best strategy in this case.
+
+That's it! I hope you liked it, and if it helps, do know that this problem is still solvable with the same algorithm if the tax of each investment is a function of the amount of time since the investment title was purchased and if the time until withdrawal is either an exact time or a minimum time. It is also possible to include inflation-correcting investments if you pass around some estimated inflation; all of this with only minor modifications. Also, feel free to change the time unit to months and get something much more precise for your investments!
