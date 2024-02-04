@@ -2,15 +2,6 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
     <head>
-        <!-- Global site tag (gtag.js) - Google Analytics -->
-        <script async src="https://www.googletagmanager.com/gtag/js?id=UA-127959762-1"></script>
-        <script>
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-
-            gtag('config', 'UA-127959762-1');
-        </script>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
         <title>Marcelo Zabani's Blog - Interfaces and typeclasses: Number APIs in C# and Haskell</title>
         <link rel="stylesheet" type="text/css" href="../css/default.css" />
@@ -23,8 +14,6 @@
             </div>
             <div id="navigation">
                 <a href="../">Home</a>
-                <!--<a href="/about.html">About</a>-->
-                <a href="../archive.html">Archive</a>
             </div>
         </div>
 
@@ -38,94 +27,94 @@
 
 <h1 id="cs-limitations">C#’s limitations</h1>
 <p>In C# sometimes I sorely miss something like an <code>INumber</code> interface with methods <code>Add</code>, <code>Subtract</code>, <code>Multiply</code> and others. The lack of this means it is cumbersome to write generic code on numbers. It means that instead of writing something like:</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode csharp"><code class="sourceCode cs"><a class="sourceLine" id="cb1-1" data-line-number="1">T <span class="fu">Sum</span>(IEnumerable&lt;T&gt; numbers) where T : INumber&lt;T&gt;;</a></code></pre></div>
+<div class="sourceCode" id="cb1"><pre class="sourceCode csharp"><code class="sourceCode cs"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>T <span class="fu">Sum</span><span class="op">(</span>IEnumerable<span class="op">&lt;</span>T<span class="op">&gt;</span> numbers<span class="op">)</span> where T <span class="op">:</span> INumber<span class="op">&lt;</span>T<span class="op">&gt;;</span></span></code></pre></div>
 <p>We have to write all possible overloads:</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode csharp"><code class="sourceCode cs"><a class="sourceLine" id="cb2-1" data-line-number="1"><span class="dt">double</span> <span class="fu">Sum</span>(IEnumerable&lt;<span class="dt">double</span>&gt; numbers);</a>
-<a class="sourceLine" id="cb2-2" data-line-number="2"><span class="dt">float</span> <span class="fu">Sum</span>(IEnumerable&lt;<span class="dt">float</span>&gt; numbers);</a>
-<a class="sourceLine" id="cb2-3" data-line-number="3"><span class="dt">decimal</span> <span class="fu">Sum</span>(IEnumerable&lt;<span class="dt">decimal</span>&gt; numbers);</a></code></pre></div>
+<div class="sourceCode" id="cb2"><pre class="sourceCode csharp"><code class="sourceCode cs"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="dt">double</span> <span class="fu">Sum</span><span class="op">(</span>IEnumerable<span class="op">&lt;</span><span class="dt">double</span><span class="op">&gt;</span> numbers<span class="op">);</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="dt">float</span> <span class="fu">Sum</span><span class="op">(</span>IEnumerable<span class="op">&lt;</span><span class="dt">float</span><span class="op">&gt;</span> numbers<span class="op">);</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="dt">decimal</span> <span class="fu">Sum</span><span class="op">(</span>IEnumerable<span class="op">&lt;</span><span class="dt">decimal</span><span class="op">&gt;</span> numbers<span class="op">);</span></span></code></pre></div>
 <p>The implementation body of all these functions will be exactly the same, but we have to write it multiple times anyway. Some people work this out by creating generic methods for the operations they need while resorting to runtime type-checking:</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode csharp"><code class="sourceCode cs"><a class="sourceLine" id="cb3-1" data-line-number="1">T <span class="fu">Add</span>(T a, T b) {</a>
-<a class="sourceLine" id="cb3-2" data-line-number="2">  <span class="kw">if</span> (a <span class="kw">is</span> <span class="dt">double</span>) {</a>
-<a class="sourceLine" id="cb3-3" data-line-number="3">    <span class="kw">return</span> (<span class="dt">double</span>)a + (<span class="dt">double</span>)b;</a>
-<a class="sourceLine" id="cb3-4" data-line-number="4">  }</a>
-<a class="sourceLine" id="cb3-5" data-line-number="5">  <span class="kw">else</span> <span class="kw">if</span> (a <span class="kw">is</span> <span class="dt">int</span>) {</a>
-<a class="sourceLine" id="cb3-6" data-line-number="6">    <span class="kw">return</span> (<span class="dt">int</span>)a + (<span class="dt">int</span>)b;</a>
-<a class="sourceLine" id="cb3-7" data-line-number="7">  }</a>
-<a class="sourceLine" id="cb3-8" data-line-number="8">  <span class="co">// .. and so on</span></a>
-<a class="sourceLine" id="cb3-9" data-line-number="9">}</a></code></pre></div>
+<div class="sourceCode" id="cb3"><pre class="sourceCode csharp"><code class="sourceCode cs"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>T <span class="fu">Add</span><span class="op">(</span>T a<span class="op">,</span> T b<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">if</span> <span class="op">(</span>a <span class="kw">is</span> <span class="dt">double</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">return</span> <span class="op">(</span><span class="dt">double</span><span class="op">)</span>a <span class="op">+</span> <span class="op">(</span><span class="dt">double</span><span class="op">)</span>b<span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="op">}</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="kw">else</span> <span class="kw">if</span> <span class="op">(</span>a <span class="kw">is</span> <span class="dt">int</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">return</span> <span class="op">(</span><span class="dt">int</span><span class="op">)</span>a <span class="op">+</span> <span class="op">(</span><span class="dt">int</span><span class="op">)</span>b<span class="op">;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  <span class="op">}</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  <span class="co">// .. and so on</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
 <p>This is not a terribly good solution, however, since we have no compile-time guarantees that the type <code>T</code> is a number at all, not to mention the performance costs of runtime type-checking. What’s more, this solution can’t be extended to new types; what if someone writes a Complex class to represent complex numbers? The implementation of Add would have to be open for modification, so this code could never be packaged in a library.</p>
 <p>Sadly, it is hard to solve this conundrum without changing the Base Class Libraries themselves. The only thing we could hope for is for the people at Microsoft to design numeric interfaces such as INumber (or others) and make our well-known primitive numeric types implement these interfaces.</p>
 <h2 id="enter-haskell.">Enter <a href="https://haskell.org">Haskell</a>.</h2>
 <p>Haskell is the programming language I’ve been playing with for the last year, and except for the steep learning curve, I have only good things to say. It can be extremely expressive and it is amusing to see that when my code builds it almost certainly works! It is also extremely terse, as you can easily see by this window manager’s less than 2000 lines of code, <a href="https://xmonad.org">xmonad</a>, and by the code on this post.</p>
-<p>In Haskell, the problem shown above can be solved with typeclasses, which we can think of for now as something similar to interfaces, since they specify a contract that concrete types must obey. <strong>The big difference here is that when we create a typeclass, we can make types we don’t own implement (in Haskell: instantiate) it!</strong> This means we can design our numeric typeclasses and have Haskell’s standard numeric types, such as <code>Data.Int</code> and <code>Data.Complex</code>, instantiate them! What’s more: in Haskell we can create functions named “+”, “*“,”/“,”-&quot; with infix application. No need to differentiate operators from regular functions: they are one and the same!</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode haskell"><code class="sourceCode haskell"><a class="sourceLine" id="cb4-1" data-line-number="1"><span class="kw">module</span> <span class="dt">Numeric</span> <span class="kw">where</span> <span class="co">-- &quot;Numeric&quot; will be the namespace in which the definitions below will live</span></a>
-<a class="sourceLine" id="cb4-2" data-line-number="2"></a>
-<a class="sourceLine" id="cb4-3" data-line-number="3"><span class="kw">import</span> <span class="kw">qualified</span> <span class="dt">Prelude</span> <span class="co">-- The prelude is a base set of types that are used for common tasks</span></a>
-<a class="sourceLine" id="cb4-4" data-line-number="4"></a>
-<a class="sourceLine" id="cb4-5" data-line-number="5"><span class="co">-- The &quot;class&quot; construct actually creates a typeclass (similar to an interface). Here we say that concrete types</span></a>
-<a class="sourceLine" id="cb4-6" data-line-number="6"><span class="co">-- that instantiate this typeclass must implement functions called &quot;+&quot; and &quot;*&quot;, both of them receiving two </span></a>
-<a class="sourceLine" id="cb4-7" data-line-number="7"><span class="co">-- parameters of type &quot;t&quot; and returning an object of type &quot;t&quot; as well</span></a>
-<a class="sourceLine" id="cb4-8" data-line-number="8"><span class="kw">class</span> <span class="dt">Number</span> t <span class="kw">where</span></a>
-<a class="sourceLine" id="cb4-9" data-line-number="9"><span class="ot">  (+) ::</span> t <span class="ot">-&gt;</span> t <span class="ot">-&gt;</span> t</a>
-<a class="sourceLine" id="cb4-10" data-line-number="10"><span class="ot">  (*) ::</span> t <span class="ot">-&gt;</span> t <span class="ot">-&gt;</span> t</a>
-<a class="sourceLine" id="cb4-11" data-line-number="11"><span class="ot">  zero ::</span> t</a>
-<a class="sourceLine" id="cb4-12" data-line-number="12"></a>
-<a class="sourceLine" id="cb4-13" data-line-number="13"><span class="co">-- Specifies the type &quot;Int&quot;, which we don't own, as an instance of &quot;Number&quot;. The Add and Multiply functions</span></a>
-<a class="sourceLine" id="cb4-14" data-line-number="14"><span class="co">-- already exist in Haskell inside the Prelude. We'll use those.</span></a>
-<a class="sourceLine" id="cb4-15" data-line-number="15"><span class="kw">instance</span> <span class="dt">Number</span> <span class="dt">Prelude.Int</span> <span class="kw">where</span></a>
-<a class="sourceLine" id="cb4-16" data-line-number="16">  a <span class="fu">+</span> b <span class="fu">=</span> (<span class="fu">Prelude.+</span>) a b</a>
-<a class="sourceLine" id="cb4-17" data-line-number="17">  a <span class="fu">*</span> b <span class="fu">=</span> (<span class="fu">Prelude.*</span>) a b</a>
-<a class="sourceLine" id="cb4-18" data-line-number="18">  zero <span class="fu">=</span> <span class="dv">0</span></a>
-<a class="sourceLine" id="cb4-19" data-line-number="19"></a>
-<a class="sourceLine" id="cb4-20" data-line-number="20"><span class="co">-- Now we can define a generic &quot;sum&quot; function with sums all numbers in a list. The following line says</span></a>
-<a class="sourceLine" id="cb4-21" data-line-number="21"><span class="co">-- that type &quot;t&quot; must be an instance of the typeclass &quot;Number&quot;, and that it receives a list of t and</span></a>
-<a class="sourceLine" id="cb4-22" data-line-number="22"><span class="co">-- returns t. There are better ways to write this in Haskell, but that is not important right now</span></a>
-<a class="sourceLine" id="cb4-23" data-line-number="23">sum<span class="ot"> ::</span> <span class="dt">Number</span> t <span class="ot">=&gt;</span> [t] <span class="ot">-&gt;</span> t</a>
-<a class="sourceLine" id="cb4-24" data-line-number="24">sum [] <span class="fu">=</span> zero <span class="co">-- This is our base case: empty list sums to zero</span></a>
-<a class="sourceLine" id="cb4-25" data-line-number="25">sum (x<span class="fu">:</span>xs) <span class="fu">=</span> x <span class="fu">+</span> sum xs <span class="co">-- This separates the first element in the list, &quot;x&quot;, from the remaining list, &quot;xs&quot;</span></a></code></pre></div>
+<p>In Haskell, the problem shown above can be solved with typeclasses, which we can think of for now as something similar to interfaces, since they specify a contract that concrete types must obey. <strong>The big difference here is that when we create a typeclass, we can make types we don’t own implement (in Haskell: instantiate) it!</strong> This means we can design our numeric typeclasses and have Haskell’s standard numeric types, such as <code>Data.Int</code> and <code>Data.Complex</code>, instantiate them! What’s more: in Haskell we can create functions named “+”, “*“,”/“,”-” with infix application. No need to differentiate operators from regular functions: they are one and the same!</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">module</span> <span class="dt">Numeric</span> <span class="kw">where</span> <span class="co">-- &quot;Numeric&quot; will be the namespace in which the definitions below will live</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="kw">import</span> <span class="kw">qualified</span> <span class="dt">Prelude</span> <span class="co">-- The prelude is a base set of types that are used for common tasks</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="co">-- The &quot;class&quot; construct actually creates a typeclass (similar to an interface). Here we say that concrete types</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="co">-- that instantiate this typeclass must implement functions called &quot;+&quot; and &quot;*&quot;, both of them receiving two </span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co">-- parameters of type &quot;t&quot; and returning an object of type &quot;t&quot; as well</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> <span class="dt">Number</span> t <span class="kw">where</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="ot">  (+) ::</span> t <span class="ot">-&gt;</span> t <span class="ot">-&gt;</span> t</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="ot">  (*) ::</span> t <span class="ot">-&gt;</span> t <span class="ot">-&gt;</span> t</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="ot">  zero ::</span> t</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a><span class="co">-- Specifies the type &quot;Int&quot;, which we don't own, as an instance of &quot;Number&quot;. The Add and Multiply functions</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="co">-- already exist in Haskell inside the Prelude. We'll use those.</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a><span class="kw">instance</span> <span class="dt">Number</span> <span class="dt">Prelude.Int</span> <span class="kw">where</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>  a <span class="op">+</span> b <span class="ot">=</span> (<span class="op">Prelude.+</span>) a b</span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>  a <span class="op">*</span> b <span class="ot">=</span> (<span class="op">Prelude.*</span>) a b</span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>  zero <span class="ot">=</span> <span class="dv">0</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a><span class="co">-- Now we can define a generic &quot;sum&quot; function with sums all numbers in a list. The following line says</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a><span class="co">-- that type &quot;t&quot; must be an instance of the typeclass &quot;Number&quot;, and that it receives a list of t and</span></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a><span class="co">-- returns t. There are better ways to write this in Haskell, but that is not important right now</span></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span><span class="ot"> ::</span> <span class="dt">Number</span> t <span class="ot">=&gt;</span> [t] <span class="ot">-&gt;</span> t</span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span> [] <span class="ot">=</span> zero <span class="co">-- This is our base case: empty list sums to zero</span></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span> (x<span class="op">:</span>xs) <span class="ot">=</span> x <span class="op">+</span> <span class="fu">sum</span> xs <span class="co">-- This separates the first element in the list, &quot;x&quot;, from the remaining list, &quot;xs&quot;</span></span></code></pre></div>
 <p><strong>Note to the reader:</strong> Haskell’s prelude already comes with a Num typeclass with more than just addition and multiplication, and existing numeric types already implement those.</p>
 <p>And that’s it! The syntax up there really is that short, and it really is type-checked! Also, it only scratches the surface of Haskell is capable of. Believe me, just a tiny scratch.</p>
 <p>It is important to notice here that in C# it is entirely possible to make new types that can be added to existing types by defining a <code>public static T operator +(T a, T2 b)</code> in the new type <code>T</code>. What we can’t do is specify generic type constraints that allow us to work with numeric types. In reality, this is not just about numeric APIs: it is just a consequence of the fact that we can’t make types we don’t own implement interfaces, combined to the fact that parametric polymorphism only allows restrictions based on subclassing or interface implementation (with the exception of the new(), struct and class constraints).</p>
 <p>It is not hard to think of how useful typeclasses can be. Why doesn’t <code>IList</code> and <code>ICollection</code> implement <code>IReadOnlyCollection</code> anyways? Maybe we want both <code>StringBuilder</code> and <code>System.String</code> to implement <code>IString</code>, allowing for generic code that doesn’t need to convert between one and another. There are many possibilities out there.</p>
 <p>Let’s take this a little further, because  it can get pretty interesting: how about subtraction? In C# we can subtract a <code>TimeSpan</code> from a <code>DateTime</code> and get another <code>DateTime</code>. Subtracting an <code>int</code> from an <code>int</code>, however, yields another <code>int</code>. Can we encode this information in Haskell in a way that is checked by the compiler itself, allowing us to write generic code that is able to subtract one object from another? The answer is yes.</p>
 <p>More: can we develop a set of typeclasses that makes sure that arithmetic operations will NEVER overflow? This would really help us write banking software, for example, allowing us to add and subtract enormous values without worrying about it. With two language extensions called <code>MultiParamTypeClasses</code> and <code>TypeFamilies</code> we can!</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode haskell"><code class="sourceCode haskell"><a class="sourceLine" id="cb5-1" data-line-number="1"><span class="ot">{-# LANGUAGE MultiParamTypeClasses #-}</span></a>
-<a class="sourceLine" id="cb5-2" data-line-number="2"><span class="ot">{-# LANGUAGE TypeFamilies #-}</span></a>
-<a class="sourceLine" id="cb5-3" data-line-number="3"><span class="kw">module</span> <span class="dt">Numeric</span> <span class="kw">where</span></a>
-<a class="sourceLine" id="cb5-4" data-line-number="4"></a>
-<a class="sourceLine" id="cb5-5" data-line-number="5"><span class="kw">import</span> <span class="kw">qualified</span> <span class="dt">Prelude</span></a>
-<a class="sourceLine" id="cb5-6" data-line-number="6"><span class="co">-- These types and functions will be available without the need to be prefixed by &quot;Prelude.&quot;</span></a>
-<a class="sourceLine" id="cb5-7" data-line-number="7"><span class="kw">import</span> <span class="dt">Prelude</span> (<span class="dt">Int</span>, <span class="dt">Integer</span>, toInteger, negate)</a>
-<a class="sourceLine" id="cb5-8" data-line-number="8"><span class="kw">import</span> <span class="dt">Data.Time</span></a>
-<a class="sourceLine" id="cb5-9" data-line-number="9"></a>
-<a class="sourceLine" id="cb5-10" data-line-number="10"><span class="kw">class</span> <span class="dt">Subtractive</span> t1 t2 <span class="kw">where</span></a>
-<a class="sourceLine" id="cb5-11" data-line-number="11">  <span class="kw">type</span> <span class="dt">Difference</span> t1<span class="ot"> t2 ::</span> <span class="fu">*</span> <span class="co">-- This is just a fancy way of saying that the combination of &quot;Difference&quot;</span></a>
-<a class="sourceLine" id="cb5-12" data-line-number="12">                             <span class="co">-- and two types is meant to represent another type</span></a>
-<a class="sourceLine" id="cb5-13" data-line-number="13"><span class="ot">  (-) ::</span> t1 <span class="ot">-&gt;</span> t2 <span class="ot">-&gt;</span> <span class="dt">Difference</span> t1 t2</a>
-<a class="sourceLine" id="cb5-14" data-line-number="14"></a>
-<a class="sourceLine" id="cb5-15" data-line-number="15"><span class="co">-- In Haskell the type &quot;Integer&quot; represents arbitrarily large integers. They are like &quot;BigInteger&quot;</span></a>
-<a class="sourceLine" id="cb5-16" data-line-number="16"><span class="co">-- in .NET or Java. Our implementation of (-) is exactly the same as Prelude's in this case.</span></a>
-<a class="sourceLine" id="cb5-17" data-line-number="17"><span class="kw">instance</span> <span class="dt">Subtractive</span> <span class="dt">Integer</span> <span class="dt">Integer</span> <span class="kw">where</span></a>
-<a class="sourceLine" id="cb5-18" data-line-number="18">  <span class="kw">type</span> <span class="dt">Difference</span> <span class="dt">Integer</span> <span class="dt">Integer</span> <span class="fu">=</span> <span class="dt">Integer</span></a>
-<a class="sourceLine" id="cb5-19" data-line-number="19">  (<span class="fu">-</span>) <span class="fu">=</span> (<span class="fu">Prelude.-</span>)</a>
-<a class="sourceLine" id="cb5-20" data-line-number="20"></a>
-<a class="sourceLine" id="cb5-21" data-line-number="21"><span class="kw">instance</span> <span class="dt">Subtractive</span> <span class="dt">Int</span> <span class="dt">Int</span> <span class="kw">where</span></a>
-<a class="sourceLine" id="cb5-22" data-line-number="22">  <span class="kw">type</span> <span class="dt">Difference</span> <span class="dt">Int</span> <span class="dt">Int</span> <span class="fu">=</span> <span class="dt">Integer</span> <span class="co">-- Here we say that the Difference between two Ints is an Integer</span></a>
-<a class="sourceLine" id="cb5-23" data-line-number="23">                                    <span class="co">--, because no matter how small two Ints are, their difference</span></a>
-<a class="sourceLine" id="cb5-24" data-line-number="24">                                    <span class="co">-- is always representable as an Integer</span></a>
-<a class="sourceLine" id="cb5-25" data-line-number="25">  a <span class="fu">-</span> b <span class="fu">=</span> (toInteger a) <span class="fu">-</span> (toInteger b)</a>
-<a class="sourceLine" id="cb5-26" data-line-number="26"></a>
-<a class="sourceLine" id="cb5-27" data-line-number="27"><span class="co">-- Let's just enjoy ourselves a little and put in some date and time types in the mix</span></a>
-<a class="sourceLine" id="cb5-28" data-line-number="28"><span class="kw">instance</span> <span class="dt">Subtractive</span> <span class="dt">UTCTime</span> <span class="dt">NominalDiffTime</span> <span class="kw">where</span></a>
-<a class="sourceLine" id="cb5-29" data-line-number="29">  <span class="kw">type</span> <span class="dt">Difference</span> <span class="dt">UTCTime</span> <span class="dt">NominalDiffTime</span> <span class="fu">=</span> <span class="dt">UTCTime</span></a>
-<a class="sourceLine" id="cb5-30" data-line-number="30">  a <span class="fu">-</span> b <span class="fu">=</span> addUTCTime (negate b) a</a>
-<a class="sourceLine" id="cb5-31" data-line-number="31"></a>
-<a class="sourceLine" id="cb5-32" data-line-number="32"><span class="co">-- The function below works for any two types t1 and t2 which allow for (t1 - t2). It takes in a list</span></a>
-<a class="sourceLine" id="cb5-33" data-line-number="33"><span class="co">-- of tuples and returns a list of the differences between the two elements in each tuple.</span></a>
-<a class="sourceLine" id="cb5-34" data-line-number="34"><span class="ot">someGenericDifferenceFunction ::</span> <span class="dt">Subtractive</span> t1 t2 <span class="ot">=&gt;</span> [(t1, t2)] <span class="ot">-&gt;</span> [<span class="dt">Difference</span> t1 t2]</a>
-<a class="sourceLine" id="cb5-35" data-line-number="35">someGenericDifferenceFunction [] <span class="fu">=</span> []</a>
-<a class="sourceLine" id="cb5-36" data-line-number="36"><span class="co">-- Quick reminder: &quot;:&quot; is a function that takes an element and a list and prepends the element into the list</span></a>
-<a class="sourceLine" id="cb5-37" data-line-number="37">someGenericDifferenceFunction ((a, b) <span class="fu">:</span> xs) <span class="fu">=</span> (a <span class="fu">-</span> b) <span class="fu">:</span> someGenericDifferenceFunction xs</a></code></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ot">{-# LANGUAGE MultiParamTypeClasses #-}</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="ot">{-# LANGUAGE TypeFamilies #-}</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="kw">module</span> <span class="dt">Numeric</span> <span class="kw">where</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="kw">import</span> <span class="kw">qualified</span> <span class="dt">Prelude</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="co">-- These types and functions will be available without the need to be prefixed by &quot;Prelude.&quot;</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="kw">import</span> <span class="dt">Prelude</span> (<span class="dt">Int</span>, <span class="dt">Integer</span>, toInteger, negate)</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="kw">import</span> <span class="dt">Data.Time</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> <span class="dt">Subtractive</span> t1 t2 <span class="kw">where</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>  <span class="kw">type</span> <span class="dt">Difference</span> t1<span class="ot"> t2 ::</span> <span class="op">*</span> <span class="co">-- This is just a fancy way of saying that the combination of &quot;Difference&quot;</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>                             <span class="co">-- and two types is meant to represent another type</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a><span class="ot">  (-) ::</span> t1 <span class="ot">-&gt;</span> t2 <span class="ot">-&gt;</span> <span class="dt">Difference</span> t1 t2</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a><span class="co">-- In Haskell the type &quot;Integer&quot; represents arbitrarily large integers. They are like &quot;BigInteger&quot;</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a><span class="co">-- in .NET or Java. Our implementation of (-) is exactly the same as Prelude's in this case.</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a><span class="kw">instance</span> <span class="dt">Subtractive</span> <span class="dt">Integer</span> <span class="dt">Integer</span> <span class="kw">where</span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>  <span class="kw">type</span> <span class="dt">Difference</span> <span class="dt">Integer</span> <span class="dt">Integer</span> <span class="ot">=</span> <span class="dt">Integer</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>  (<span class="op">-</span>) <span class="ot">=</span> (<span class="op">Prelude.-</span>)</span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a><span class="kw">instance</span> <span class="dt">Subtractive</span> <span class="dt">Int</span> <span class="dt">Int</span> <span class="kw">where</span></span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>  <span class="kw">type</span> <span class="dt">Difference</span> <span class="dt">Int</span> <span class="dt">Int</span> <span class="ot">=</span> <span class="dt">Integer</span> <span class="co">-- Here we say that the Difference between two Ints is an Integer</span></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>                                    <span class="co">--, because no matter how small two Ints are, their difference</span></span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>                                    <span class="co">-- is always representable as an Integer</span></span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>  a <span class="op">-</span> b <span class="ot">=</span> (<span class="fu">toInteger</span> a) <span class="op">-</span> (<span class="fu">toInteger</span> b)</span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a><span class="co">-- Let's just enjoy ourselves a little and put in some date and time types in the mix</span></span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a><span class="kw">instance</span> <span class="dt">Subtractive</span> <span class="dt">UTCTime</span> <span class="dt">NominalDiffTime</span> <span class="kw">where</span></span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a>  <span class="kw">type</span> <span class="dt">Difference</span> <span class="dt">UTCTime</span> <span class="dt">NominalDiffTime</span> <span class="ot">=</span> <span class="dt">UTCTime</span></span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a>  a <span class="op">-</span> b <span class="ot">=</span> addUTCTime (<span class="fu">negate</span> b) a</span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a><span class="co">-- The function below works for any two types t1 and t2 which allow for (t1 - t2). It takes in a list</span></span>
+<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a><span class="co">-- of tuples and returns a list of the differences between the two elements in each tuple.</span></span>
+<span id="cb5-34"><a href="#cb5-34" aria-hidden="true" tabindex="-1"></a><span class="ot">someGenericDifferenceFunction ::</span> <span class="dt">Subtractive</span> t1 t2 <span class="ot">=&gt;</span> [(t1, t2)] <span class="ot">-&gt;</span> [<span class="dt">Difference</span> t1 t2]</span>
+<span id="cb5-35"><a href="#cb5-35" aria-hidden="true" tabindex="-1"></a>someGenericDifferenceFunction [] <span class="ot">=</span> []</span>
+<span id="cb5-36"><a href="#cb5-36" aria-hidden="true" tabindex="-1"></a><span class="co">-- Quick reminder: &quot;:&quot; is a function that takes an element and a list and prepends the element into the list</span></span>
+<span id="cb5-37"><a href="#cb5-37" aria-hidden="true" tabindex="-1"></a>someGenericDifferenceFunction ((a, b) <span class="op">:</span> xs) <span class="ot">=</span> (a <span class="op">-</span> b) <span class="op">:</span> someGenericDifferenceFunction xs</span></code></pre></div>
 <p>The example above is still incomplete: we need instances of <code>Subtractive Integer Int</code> and <code>Subtractive Int Integer</code> for this API to become more practical. This is left to the reader, however. Meanwhile, let’s try this out in ghci:</p>
 <pre><code>terminal&gt; ghci
 ghci&gt; :l Numeric.hs
@@ -162,7 +151,7 @@ s.setAttribute('data-timestamp', +new Date());
 <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
         </div>
         <div id="footer">
-            Site proudly generated by
+            Site generated by
             <a href="http://jaspervdj.be/hakyll">Hakyll</a>
         </div>
     </body>

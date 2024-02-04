@@ -1,0 +1,236 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <title>Marcelo Zabani's Blog - Algorithms to split group expenses</title>
+        <link rel="stylesheet" type="text/css" href="../css/default.css" />
+        <link rel="stylesheet" type="text/css" href="../css/syntax.css" />
+    </head>
+    <body>
+        <div id="header">
+            <div id="logo">
+                <a href="../">Marcelo Zabani's Blog</a>
+            </div>
+            <div id="navigation">
+                <a href="../">Home</a>
+            </div>
+        </div>
+
+        <div id="content">
+            <h1>Algorithms to split group expenses</h1>
+
+            <div class="info">
+    Posted on February  4, 2024
+    
+</div>
+
+<h1 id="the-problem">The problem</h1>
+<p>When traveling with friends or family it is typical that some some people will pay for things that others will also benefit from. Maybe Joe pays for the rented place, Jane pays for everyone’s dinner one night, Bob buys himself and Alice lunch some day.</p>
+<p>The question then is how to calculate how much each person owes the others at the end of the trip. In this article I’ll try to devise different schemes and look at reducing the amount of necessary transactions to make everyone even.</p>
+<p>This is a very simple problem, so one might wonder why an post. For one, devising a formal proof that the intuitive algorithm works was fun, particularly because I haven’t done maths since graduating 10 years ago. And also because it was humbling that such a simple problem got me so immersed, even terribly misled (I’ll explain why in the post) while solving it.</p>
+<h2 id="a-first-solution">A first solution</h2>
+<p>Suppose four friends, Joe, Jane, Alice and Bob, travel together, and that we know all the spendings during the trip and who benefited from them, as such:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Payer</th>
+<th>Total value payed</th>
+<th>Description</th>
+<th>Who benefited</th>
+<th>Each benefited</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Joe</td>
+<td>1000.00</td>
+<td>Rent</td>
+<td>All four</td>
+<td>250.00</td>
+</tr>
+<tr class="even">
+<td>Jane</td>
+<td>100.00</td>
+<td>Dinner</td>
+<td>All four</td>
+<td>25.00</td>
+</tr>
+<tr class="odd">
+<td>Bob</td>
+<td>50.00</td>
+<td>Lunch</td>
+<td>Bob, Alice</td>
+<td>25.00</td>
+</tr>
+<tr class="even">
+<td>Bob</td>
+<td>15.00</td>
+<td>Sunscreen</td>
+<td>Bob (himself)</td>
+<td>15.00</td>
+</tr>
+</tbody>
+</table>
+<p>Knowing there are <span class="math inline"><em>p</em> = 4</span> participants, we can obtain how much each person benefited from each payment. Everyone benefited <span class="math inline">1000.00/4 = 250.00</span> from rent and <span class="math inline">100.00/4 = 25.00</span> from dinner, for example.</p>
+<p>If we look at Joe, he spent <span class="math inline">1000.00</span> but benefited only <span class="math inline">250.00 + 25.00</span> from rent and dinner, so he must be paid <span class="math inline">1000.00 − 275.00 = 725.00</span> in total at the end of the trip.</p>
+<p>Alice is very different. She didn’t pay for anything and benefited <span class="math inline">250.00 + 25.00 + 25.00 = 300.00</span> from rent, dinner and lunch. She will have to pay Bob, Jane and Joe for that.</p>
+<p>The last line is just Bob buying himself sunscreen. We can safely ignore it.</p>
+<p>It isn’t hard to build a <span class="math inline"><em>p</em> ⋅ (<em>p</em>−1)/2</span> sized matrix with every pair of participants in it to determine how much each owes another from this. However, each person needs to pay <span class="math inline">(<em>p</em>−1)/2</span> other participants in the worst-case scenario and non-worst-case scenarios can still involve a lot of payments (Jane only has to pay Joe in our example, but Alice has to pay 3 people). Even if someone’s only on the receiving end, it will be inconvenient for them to check they received the right amount of money if it’s split across multiple transactions. This gets tedious as more participants join. We can do better.</p>
+<h2 id="minimizing-the-number-of-transactions">Minimizing the number of transactions</h2>
+<p>One alternative is to build a sequence of transactions such that each person in this chain receives a payment from the previous person and pays the next such that the difference in value is their net debt, i.e. total value benefited - total value payed.</p>
+<p>To make sure we don’t get any negative payments in our list, we sort it with users that are more indebted first, less indebted last. This is what our list would look like for our example:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Order</th>
+<th>From</th>
+<th>To</th>
+<th>Amount</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td>Alice</td>
+<td>Bob</td>
+<td><span class="math inline">300.00</span></td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>Bob</td>
+<td>Jane</td>
+<td><span class="math inline">550.00</span></td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td>Jane</td>
+<td>Joe</td>
+<td><span class="math inline">725.00</span></td>
+</tr>
+</tbody>
+</table>
+<p>With respect to both incoming and outgoing transactions, this is very nice: in the worst-case scenario all but one participant make one single payment and receive one single payment, one participant receives a single payment and makes none.</p>
+<p>Going forward, let’s call this the canonical solution.</p>
+<h2 id="payment-orders-of-non-canonical-solutions">Payment orders of non canonical solutions</h2>
+<p>Previously we sorted participants with most indebted first to avoid negative values in payments. But there are other possible arrangements, such as the one below:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Order</th>
+<th>From</th>
+<th>To</th>
+<th>Amount</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td>Bob</td>
+<td>Alice</td>
+<td><span class="math inline">250.00</span></td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>Alice</td>
+<td>Jane</td>
+<td><span class="math inline">550.00</span></td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td>Jane</td>
+<td>Joe</td>
+<td><span class="math inline">725.00</span></td>
+</tr>
+</tbody>
+</table>
+<p>There is no single order that avoids negative payments. If we enumerate transactions from <span class="math inline"><em>t</em><sub>1</sub></span> to <span class="math inline"><em>t</em><sub><em>p</em> − 1</sub></span>, a transaction <span class="math inline"><em>t</em><sub><em>x</em></sub></span> from participant <span class="math inline"><em>x</em></span> with net debt <span class="math inline"><em>d</em><sub><em>x</em></sub></span> is defined by:</p>
+<p><span class="math display"><em>t</em><sub><em>x</em></sub> = <em>t</em><sub><em>x</em> − 1</sub> + <em>d</em><sub><em>x</em></sub></span></p>
+<p>If we expand <span class="math inline"><em>d</em><sub><em>x</em></sub> = <em>b</em><sub><em>x</em></sub> − <em>s</em><sub><em>x</em></sub></span> (value benefited minus value spent) and require non-negative transactions:</p>
+<p><span class="math display"><em>t</em><sub><em>x</em></sub> = <em>t</em><sub><em>x</em> − 1</sub> + <em>b</em><sub><em>x</em></sub> − <em>s</em><sub><em>x</em></sub> ≥ 0</span></p>
+<p>Notice that if <span class="math inline"><em>t</em><sub><em>x</em></sub></span> is equal to <span class="math inline">0</span> for some participant, it means they can be skipped and make the chain even shorter (algorithmically we could even filter those participants out at an earlier stage). Let’s define the base case <span class="math inline"><em>t</em><sub>0</sub> = 0</span> so that <span class="math inline"><em>t</em><sub>1</sub></span> is well defined, and write down the first few terms of the series:</p>
+<p><span class="math display"><em>t</em><sub>1</sub> = <em>b</em><sub>1</sub> − <em>s</em><sub>1</sub></span>
+<span class="math display"><em>t</em><sub>2</sub> = <em>t</em><sub>1</sub> + <em>b</em><sub>2</sub> − <em>s</em><sub>2</sub></span>
+<span class="math display"><em>t</em><sub>3</sub> = <em>t</em><sub>2</sub> + <em>b</em><sub>3</sub> − <em>s</em><sub>3</sub></span>
+<span class="math display">...</span>
+<span class="math display"><em>t</em><sub><em>p</em> − 1</sub> = <em>t</em><sub><em>p</em> − 2</sub> + <em>b</em><sub><em>p</em> − 1</sub> − <em>s</em><sub><em>p</em> − 1</sub></span></p>
+<p>Now, any order of participants <span class="math inline">1, 2, 3, ..., <em>p</em> − 1</span> that you assign and keeps all of the equations above non-negative should be fine. But let’s keep exploring. If we add all equations from the top up to some arbitrary <span class="math inline"><em>t</em><sub><em>x</em></sub></span>, what do we get?</p>
+<p><span class="math display"><em>t</em><sub><em>x</em></sub> = <em>b</em><sub>1</sub> + <em>b</em><sub>2</sub> + ... + <em>b</em><sub><em>x</em></sub> − (<em>s</em><sub>1</sub>+<em>s</em><sub>2</sub>+...+<em>s</em><sub><em>x</em></sub>)</span></p>
+<p>This is equivalent to saying that a participant <span class="math inline"><em>x</em></span> will transfer the amount of money that is the net debt of all previous participants and also of themselves. Despite it being intuitively “obvious” that the canonical solution must work, the <span class="math inline"><em>b</em> − <em>s</em></span> net values become increasingly negative when we reach participants that spent more than they benefited. So can we prove that sorting participants by their <span class="math inline"><em>b</em> − <em>s</em></span> in descending order always yields positive numbers for all <span class="math inline"><em>t</em><sub><em>x</em></sub></span>? Let’s try by induction.</p>
+<h2 id="proving-there-are-no-negative-transactions-in-the-canonical-solution-by-induction">Proving there are no negative transactions in the canonical solution, by induction</h2>
+<p>Given a number of participants and filtering out those with <span class="math inline"><em>b</em> − <em>s</em> = 0</span>, suppose <span class="math inline"><em>p</em></span> participants remain (otherwise there’s no problem to solve). Because <span class="math inline">∑<em>b</em><sub><em>x</em></sub> − <em>s</em><sub><em>x</em></sub> = 0</span>, there must be at least one participant with positive <span class="math inline"><em>b</em> − <em>s</em></span> and at least one with negative <span class="math inline"><em>b</em> − <em>s</em></span>. Let’s expand that summation so we can see more clearly:</p>
+<p><span class="math display">∑<em>b</em><sub><em>x</em></sub> − <em>s</em><sub><em>x</em></sub> = <em>b</em><sub>1</sub> − <em>s</em><sub>1</sub> + <em>b</em><sub>2</sub> − <em>s</em><sub>2</sub> + ... + <em>b</em><sub><em>p</em></sub> − <em>s</em><sub><em>p</em></sub> = 0</span></p>
+<p>Assigning participants in decreasing order of <span class="math inline"><em>b</em> − <em>s</em></span>, we know <span class="math inline"><em>b</em><sub>1</sub> − <em>s</em><sub>1</sub> &gt; 0</span> and <span class="math inline"><em>b</em><sub><em>p</em></sub> − <em>s</em><sub><em>p</em></sub> &lt; 0</span>. With help from the sum above, let’s evaluate <span class="math inline"><em>t</em><sub><em>p</em> − 1</sub></span>:</p>
+<p><span class="math display"><em>t</em><sub><em>p</em> − 1</sub> = <em>b</em><sub>1</sub> − <em>s</em><sub>1</sub> + <em>b</em><sub>2</sub> − <em>s</em><sub>2</sub> + ... + <em>b</em><sub><em>p</em> − 1</sub> − <em>s</em><sub><em>p</em> − 1</sub> =  − (<em>b</em><sub><em>p</em></sub>−<em>s</em><sub><em>p</em></sub>) &gt; 0</span></p>
+<p>So <span class="math inline"><em>t</em><sub><em>p</em> − 1</sub></span> must be positive as well. But what about <span class="math inline"><em>t</em><sub><em>p</em> − 2</sub></span>?</p>
+<p><span class="math display"><em>t</em><sub><em>p</em> − 2</sub> = <em>b</em><sub>1</sub> − <em>s</em><sub>1</sub> + <em>b</em><sub>2</sub> − <em>s</em><sub>2</sub> + ... + <em>b</em><sub><em>p</em> − 2</sub> − <em>s</em><sub><em>p</em> − 2</sub> =  − (<em>b</em><sub><em>p</em></sub>−<em>s</em><sub><em>p</em></sub>) − (<em>b</em><sub><em>p</em> − 1</sub>−<em>s</em><sub><em>p</em> − 1</sub>)</span></p>
+<p>We don’t know the sign of <span class="math inline"><em>b</em><sub><em>p</em> − 1</sub> − <em>s</em><sub><em>p</em> − 1</sub></span>. But if it’s negative, then the right-hand side of the equation helps us determine that <span class="math inline"><em>t</em><sub><em>p</em> − 2</sub></span> is positive. If it is positive, then because terms are sorted all the previous <span class="math inline"><em>b</em> − <em>s</em></span> are also positive, and the left-hand side of the equation shows <span class="math inline"><em>t</em><sub><em>p</em> − 2</sub></span> should also be positive.</p>
+<p>It’s easy to extend this to all other terms and see all terms <span class="math inline"><em>t</em><sub><em>x</em></sub></span> are positive. <span class="math inline">◼</span></p>
+<h2 id="are-negative-transactions-really-a-problem">Are negative transactions really a problem?</h2>
+<p>We went through great effort to prove the canonical solution only contains positive transactions, but would those actually be a problem?</p>
+<p>Remember that <span class="math inline"><em>b</em><sub><em>B</em><em>o</em><em>b</em></sub> = 250.00</span>, <span class="math inline"><em>b</em><sub><em>J</em><em>a</em><em>n</em><em>e</em></sub> = 175.00</span>, <span class="math inline"><em>b</em><sub><em>A</em><em>l</em><em>i</em><em>c</em><em>e</em></sub> = 300.00</span> and <span class="math inline"><em>b</em><sub><em>J</em><em>o</em><em>e</em></sub> =  − 725.00</span>.</p>
+<p>If we create a sequence in the following arbitrary order: Jane -&gt; Joe -&gt; Bob &gt; Alice, we get this:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Order</th>
+<th>From</th>
+<th>To</th>
+<th>Amount</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td>Jane</td>
+<td>Joe</td>
+<td><span class="math inline">175.00</span></td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>Joe</td>
+<td>Bob</td>
+<td><span class="math inline"> − 550.00</span></td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td>Bob</td>
+<td>Alice</td>
+<td><span class="math inline"> − 300.00</span></td>
+</tr>
+</tbody>
+</table>
+<p>With negative transactions being paid in the other direction, this solution still satisfies the individual <span class="math inline"><em>b</em></span> values (by construction), which when you think about it, is the only thing that truly matters.</p>
+<p>My initial attachment to having only non-negative transactions was a silly one. We can put participants in any order as long as we apply <span class="math inline"><em>t</em><sub><em>i</em></sub> = <em>t</em><sub><em>i</em> − 1</sub> + <em>b</em><sub><em>i</em></sub></span>. Money will leave indebted participants’ pockets and reach “credited” participants’ pockets correctly one way or another, by construction.</p>
+<p>This does change the distribution of transactions, though, as now Joe will receive two transactions instead of just one. Still, the nicest properties are still there: each participant takes part in at most two transactions and the total number of transactions is <span class="math inline"><em>p</em> − 1</span>. It’s easy to see that will always be the case, since no name appears in more than 2 lines in the table.</p>
+<p>This is the source of my embarassment: there’s nothing wrong with negative transactions. As usual, I was too keen on working with formalism to prove a property that would restrict the problem. Looking for restrictions is sane, but using formalism too soon to get there instead of developing an intuition around the problem is something I have always done, and it has once again gotten in my way, even for such a simple problem. In the end, I proved an unnecessary restriction, and it wasn’t hard to see it by just looking at the transactions table and reasoning informally.</p>
+<p>I considered not publishing this post, but thought maybe it helps me find other people that suffer from “formalitis” and get some tips. Please comment if you have any.</p>
+
+<div id="disqus_thread"></div>
+<script>
+
+/**
+*  RECOMMENDED CONFIGURATION VARIABLES: EDIT AND UNCOMMENT THE SECTION BELOW TO INSERT DYNAMIC VALUES FROM YOUR PLATFORM OR CMS.
+*  LEARN WHY DEFINING THESE VARIABLES IS IMPORTANT: https://disqus.com/admin/universalcode/#configuration-variables*/
+
+var disqus_config = function () {
+this.page.url = 'https://mzabani.github.io/posts/2024-02-04-splitting-expenses.html';  // Replace PAGE_URL with your page's canonical URL variable
+this.page.identifier = '/posts/2024-02-04-splitting-expenses.html'; // Replace PAGE_IDENTIFIER with your page's unique identifier variable
+this.page.title = 'Algorithms to split group expenses';
+};
+
+(function() { // DON'T EDIT BELOW THIS LINE
+var d = document, s = d.createElement('script');
+s.src = '//mzabani.disqus.com/embed.js';
+s.setAttribute('data-timestamp', +new Date());
+(d.head || d.body).appendChild(s);
+})();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+        </div>
+        <div id="footer">
+            Site generated by
+            <a href="http://jaspervdj.be/hakyll">Hakyll</a>
+        </div>
+    </body>
+</html>
