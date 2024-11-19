@@ -1,0 +1,251 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <title>Marcelo Zabani's Blog - What Serializable isolation really means in PostgreSQL</title>
+        <link rel="stylesheet" type="text/css" href="../css/default.css" />
+        <link rel="stylesheet" type="text/css" href="../css/syntax.css" />
+    </head>
+    <body>
+        <div id="header">
+            <div id="logo">
+                <a href="../">Marcelo Zabani's Blog</a>
+            </div>
+            <div id="navigation">
+                <a href="../">Home</a>
+            </div>
+        </div>
+
+        <div id="content">
+            <h1>What Serializable isolation really means in PostgreSQL</h1>
+
+            <div class="info">
+    Posted on November  20, 2024
+    
+</div>
+
+<p>Many of us are familiar with the typical transactional isolation
+levels in relation databases. Read-committed, Repeatable-Read and
+Serializable are examples. And there are many articles and sources
+listing the undesirable phenomena some of these isolation levels protect
+us from, like dirty reads, phantom reads and serialization
+anomalies.</p>
+<p>One also finds phrases like serializable transactions are “guaranteed
+to produce the same effect as running them one at a time in some order”,
+but what kind of strangeness might arise from not running as such? There
+are also Stack Overflow answers suggesting accounting and enforcing
+credit limits is an example where serializability is important, but what
+does that <em>really</em> mean? PostgreSQL’s <a
+href="https://www.postgresql.org/docs/current/transaction-iso.html">docs</a>
+say that “a read-only transaction at this level may see a control record
+updated to show that a batch has been completed but not see one of the
+detail records which is logically part of the batch because it read an
+earlier revision of the control record”, but what does that
+<em>really</em> mean?</p>
+<p>Most sources I’ve found lack two very important things: an intuition
+around the kinds of failures that might arise with isolation less than
+Serializable, e.g. Repeatable-Read, and examples.</p>
+<p>So I’ll show you two such examples. They’re not mine, they’re from
+the paper that introduced the current Serializable isolation’s
+implementation in PostgreSQL <a
+href="https://arxiv.org/pdf/1208.4179">1</a>. So big thanks to Kevin
+Grittner and Dan Ports. In fact, this blog post is mostly a copy of
+their paper, it’s just shortened quite a bit and focused on the
+examples. So all credit goes to those guys. Read the paper if you want
+more details.</p>
+<p>From those examples we <em>hope</em> to build a slightly better
+intuition around serialization anomalies, but I actually hope to
+convince you, the reader, that anything less than Serializable isolation
+- including Repeatable-Read - is tantamount to a level where humans
+cannot reason about correctness, and implications can be dire.</p>
+<p>Before the examples, we shall take a quick closer look at
+Repeatable-Read.</p>
+<h3 id="repeatable-read">Repeatable-Read</h3>
+<p>Repeatable-Read ensures inside your transaction you do not see
+<em>any</em> effects of other concurrent transactions, whether they’ve
+committed, aborted or are still running. You get a <em>snapshot</em> of
+the database when you <code>BEGIN</code> your transaction and work with
+that until you commit.</p>
+<p>Also, two concurrent transactions cannot modify the same row under
+Repeatable-Read.</p>
+<p>It sounds pretty robust. How can this go wrong? Let’s look at
+examples.</p>
+<h3 id="first-example-doctors-on-call">First example: doctors on
+call</h3>
+<p>Suppose you manage a hospital and you you must always have at least
+one doctor on call at any one time. Bob, Alice and Joe are your doctors,
+and initially Alice and Joe are on call but Bob isn’t.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> doctors (<span class="kw">id</span> SERIAL <span class="kw">PRIMARY</span> <span class="kw">KEY</span>, name text, oncall BOOL);</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">INSERT</span> <span class="kw">INTO</span> doctors (name, oncall) <span class="kw">VALUES</span> (<span class="st">&#39;Alice&#39;</span>, <span class="kw">TRUE</span>), (<span class="st">&#39;Joe&#39;</span>, <span class="kw">TRUE</span>) (<span class="st">&#39;Bob&#39;</span>, <span class="kw">FALSE</span>);</span></code></pre></div>
+<p>Now you write the endpoint that takes a doctor off call (in some
+pseudo-code):</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>x <span class="op">&lt;-</span> <span class="kw">SELECT</span> <span class="fu">COUNT</span>(<span class="op">*</span>) <span class="kw">FROM</span> doctors <span class="kw">WHERE</span> oncall;</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> x <span class="op">&gt;=</span> <span class="dv">2</span> <span class="cf">then</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="kw">UPDATE</span> doctors <span class="kw">SET</span> oncall<span class="op">=</span><span class="kw">false</span> <span class="kw">WHERE</span> name <span class="op">=</span> {DOCTORNAMEHERE};</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  RAISE <span class="st">&#39;This would leave no doctors on call&#39;</span>;</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="cf">end</span> <span class="cf">if</span></span></code></pre></div>
+<p>Before continuing, take a minute to look at the code above: it looks
+right. It would probably pass review in most places. It’s the code I
+would write, but also most people I know. Or it’s similar to that.</p>
+<p>Suppose users call your endpoint twice for ‘Alice’ and for ‘Joe’, and
+the transactions run concurrently. Even with Repeatable-Read isolation
+level, both transactions will run and commit successfully, and at the
+end you will have 0 (zero) doctors on call. This is of course very
+different from what would happen if you ran two transactions <em>one
+after the other/sequentially</em>, so it’s a perfect example of a
+serialization anomaly.</p>
+<p>With Serializable isolation one of the two transactions would fail
+with:</p>
+<pre><code>ERROR:  could not serialize access due to read/write dependencies among transactions</code></pre>
+<p>And the hospital would be in good hands. This is the first example of
+where Repeatable-Read fails: when concurrent transactions read the same
+data but write to different places.</p>
+<h3 id="second-example-receipts-and-batches">Second example: receipts
+and batches</h3>
+<p>Also from Grittner’s and Ports’s paper, imagine you have a table of
+receipts that are each associated with a batch number, and another table
+with just one row storing the current batch number. Then you have 3
+operations, copied verbatim from the referenced paper below:</p>
+<ul>
+<li>NEW-RECEIPT: reads the current batch number from the control table,
+then inserts a new entry in the receipts table tagged with that batch
+number</li>
+<li>CLOSE-BATCH: increments the current batch number in the control
+table</li>
+<li>REPORT: reads the current batch number from the control table, then
+reads all entries from the receipts table with the previous batch number
+(i.e. to display a total of the previous day’s receipts)</li>
+</ul>
+<p>Let’s create these tables with the current batch starting as
+<code>1</code> and one receipt in it:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> current_batch (batch <span class="dt">INT</span>);</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="kw">INSERT</span> <span class="kw">INTO</span> current_batch <span class="kw">VALUES</span> (<span class="dv">1</span>);</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> receipts (<span class="kw">id</span> SERIAL <span class="kw">PRIMARY</span> <span class="kw">KEY</span>, batch <span class="dt">INT</span>, amount <span class="dt">INT</span>);</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="kw">INSERT</span> <span class="kw">INTO</span> receipts (batch, amount) <span class="kw">VALUES</span> (<span class="dv">1</span>, <span class="dv">100</span>);</span></code></pre></div>
+<p>Let’s look at one particular transaction first, the
+<code>REPORT</code> one:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>current_batch <span class="op">&lt;-</span> <span class="kw">SELECT</span> batch <span class="kw">FROM</span> current_batch;</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="kw">SELECT</span> <span class="fu">SUM</span>(amount) <span class="kw">FROM</span> receipts <span class="kw">WHERE</span> batch<span class="op">=</span>current_batch<span class="op">-</span><span class="dv">1</span>;</span></code></pre></div>
+<p>Again I will ask you to read this and think for a minute. This looks
+right, doesn’t it? Can you think of what problems might arise from this
+under Repeatable-Read isolation?</p>
+<p>The answer is: <strong>it can report the sum of a batch that might
+still have receipts added to it.</strong> I am not kidding. Let me show
+you:</p>
+<p>Suppose 3 transactions run concurrently in Repeatable-Read mode, each
+with one of the 3 kinds of transactions, and their execution is
+interleaved as such:</p>
+<table>
+<tr>
+<td>
+Transaction 1 (REPORT)
+</td>
+<td>
+Transaction 2 (NEW-RECEIPT)
+</td>
+<td>
+Transaction 3 (CLOSE-BATCH)
+</td>
+</tr>
+<tr>
+<td>
+</td>
+<td>
+<code>BEGIN ISOLATION LEVEL REPEATABLE READ;       current_batch &lt;- SELECT batch FROM current_batch;</code>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+</td>
+<td>
+</td>
+<td>
+<code>BEGIN ISOLATION LEVEL REPEATABLE READ;       UPDATE current_batch SET batch=batch+1;       COMMIT;</code>
+</td>
+</tr>
+<tr>
+<td>
+<code>BEGIN ISOLATION LEVEL REPEATABLE READ;       current_batch &lt;- SELECT batch FROM current_batch;           SELECT SUM(amount) FROM receipts WHERE batch=current_batch-1;           COMMIT;</code>
+</td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+</td>
+<td>
+<code>INSERT INTO receipts (batch, amount) VALUES (current_batch, 1000);       COMMIT;</code>
+</td>
+<td>
+</td>
+</tr>
+</table>
+<p>After the execution above, the transaction in the middle will insert
+a receipt with amount=1000 into batch 1, but the first transaction
+(REPORT) will have shown a total of 100 for that batch.</p>
+<p>Another thing that is really hard to see is that this requires all 3
+transactions to run concurrently to run into this odd behaviour, and
+that <code>REPORT</code> is read-only. And once again, using
+Serializable isolation would make transactions fail to keep this from
+happening.</p>
+<p>The broad picture is that serialization anomalies come to be due to a
+cycle of rw-conflicts (a rw-conflict is a Read by one transaction whose
+results would be affected by a concurrent transaction’s Writes; more
+details in the referenced paper), but this is of course not helpful for
+an intuition or smaller mental model. So I have no intuition to offer
+the reader for this example.</p>
+<h3 id="conclusions">Conclusions</h3>
+<p>Hopefully I’ve achieved my goal: unless you’re truly one of a kind (I
+tend to be careful with my wording, but I’m going to take the liberty of
+speaking plainly: you’re not; I am not; no human is), you cannot reason
+about what might happen in a system that’s not running with Serializable
+isolation. And very strange/bad things can happen. We covered an example
+with 2 transactions and another with 3, but real systems have tens,
+hundreds, thousands of them. Can you comfortably say no concurrent
+execution of transactions will have an undesirable effect?</p>
+<p>Hopefully I’ll find time to write about some limitations of
+PostgreSQL’s current implementation of Serializable isolation next
+time.</p>
+<h3 id="references">References</h3>
+<p><a href="https://arxiv.org/pdf/1208.4179">1 - Kevin Grittner’s and
+Dan Ports’s paper on SSI in PostgreSQL</a></p>
+
+<div id="disqus_thread"></div>
+<script>
+
+/**
+*  RECOMMENDED CONFIGURATION VARIABLES: EDIT AND UNCOMMENT THE SECTION BELOW TO INSERT DYNAMIC VALUES FROM YOUR PLATFORM OR CMS.
+*  LEARN WHY DEFINING THESE VARIABLES IS IMPORTANT: https://disqus.com/admin/universalcode/#configuration-variables*/
+
+var disqus_config = function () {
+this.page.url = 'https://mzabani.github.io/posts/2024-02-04-splitting-expenses.html';  // Replace PAGE_URL with your page's canonical URL variable
+this.page.identifier = '/posts/2024-02-04-splitting-expenses.html'; // Replace PAGE_IDENTIFIER with your page's unique identifier variable
+this.page.title = 'Algorithms to split group expenses';
+};
+
+(function() { // DON'T EDIT BELOW THIS LINE
+var d = document, s = d.createElement('script');
+s.src = '//mzabani.disqus.com/embed.js';
+s.setAttribute('data-timestamp', +new Date());
+(d.head || d.body).appendChild(s);
+})();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+        </div>
+        <div id="footer">
+            Site generated by
+            <a href="http://jaspervdj.be/hakyll">Hakyll</a>
+        </div>
+    </body>
+</html>
+
