@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <title>Marcelo Zabani's Blog - Limitations of SSI's implementation in PostgreSQL</title>
+        <link rel="stylesheet" type="text/css" href="../css/default.css" />
+        <link rel="stylesheet" type="text/css" href="../css/syntax.css" />
+    </head>
+    <body>
+        <div id="header">
+            <div id="logo">
+                <a href="../">Marcelo Zabani's Blog</a>
+            </div>
+            <div id="navigation">
+                <a href="../">Home</a>
+            </div>
+        </div>
+
+        <div id="content">
+            <h1>Limitations of SSI's implementation in PostgreSQL</h1>
+
+            <div class="info">
+    Posted on December  8, 2024
+    
+</div>
+
+<p>In the <a
+href="/posts/2024-11-20-pg-what-serializable-isolation-really-means.md">previous
+article</a> I covered why Serializable transactions are great for a more
+worry-free development of concurrent applications. Now we’re going to
+cover some details of how it’s implemented in postgresql so we
+understand some of its limitations. Essentially this post is about
+false-positive detection of serialization anomalies.</p>
+<p>Let’s create a test table with a large number of rows first, the
+smallest Id being 1000 and the largest being 1000000:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> test_table (<span class="kw">id</span> SERIAL <span class="kw">PRIMARY</span> <span class="kw">KEY</span>, name TEXT);</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">WITH</span> q(num) <span class="kw">AS</span> (<span class="kw">SELECT</span> <span class="op">*</span> <span class="kw">FROM</span> generate_series(<span class="dv">1000</span>,<span class="dv">1000000</span>)) <span class="kw">INSERT</span> <span class="kw">INTO</span> test_table (<span class="kw">id</span>, name) <span class="kw">SELECT</span> num, <span class="st">&#39;anything&#39;</span> <span class="kw">FROM</span> q;</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">SELECT</span> <span class="fu">min</span>(<span class="kw">id</span>), <span class="fu">max</span>(<span class="kw">id</span>) <span class="kw">FROM</span> test_table;</span></code></pre></div>
+<p>Let’s start with two concurrent transactions whose concurrent
+execution is serializable, so postgres should let them commit. Scroll
+further down below to look at the SQL we will execute as you read the
+bullet points below:<br />
+- The transaction to the left (henceforth called left-txn) looks for a
+row with id=5 and right-txn doesn’t insert such a row.<br />
+- Right-txn looks for a row with id=1000001 and doesn’t find one, but
+left-txn does insert a row with that Id.<br />
+- Right-txn inserts a row with Id 1000002, but left-txn is not / would
+not be affected by that in the slightest.</p>
+<p>The execution is serializable because the final results are the same
+as if right-txn had committed before left-txn started (but postgres will
+let you commit any one of them before the other).</p>
+<p>To try this experiment, open two separate <code>psql</code>
+instances, and run each command in the order they’re laid out vertically
+below in each separate instance:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="cf">BEGIN</span> <span class="kw">ISOLATION</span> <span class="kw">LEVEL</span> <span class="kw">SERIALIZABLE</span>;</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>                                                                        <span class="cf">BEGIN</span> <span class="kw">ISOLATION</span> <span class="kw">LEVEL</span> <span class="kw">SERIALIZABLE</span>;</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="kw">SELECT</span> <span class="op">*</span> <span class="kw">FROM</span> test_table <span class="kw">WHERE</span> <span class="kw">id</span><span class="op">=</span><span class="dv">5</span>;</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="co">-- 0 results</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>                                                                        <span class="kw">SELECT</span> <span class="op">*</span> <span class="kw">FROM</span> test_table <span class="kw">WHERE</span> <span class="kw">id</span><span class="op">=</span><span class="dv">1000001</span>;</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>                                                                        <span class="co">-- 0 results</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="kw">INSERT</span> <span class="kw">INTO</span> test_table (<span class="kw">id</span>, name) <span class="kw">VALUES</span> (<span class="dv">1000001</span>, <span class="st">&#39;something&#39;</span>);</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="co">-- INSERT 0 1</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>                                                                        <span class="kw">INSERT</span> <span class="kw">INTO</span> test_table (<span class="kw">id</span>, name) <span class="kw">VALUES</span> (<span class="dv">1000002</span>, <span class="st">&#39;something&#39;</span>);</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>                                                                        <span class="co">-- INSERT 0 1</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>                                                                        <span class="kw">COMMIT</span>; <span class="co">-- all good</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="kw">COMMIT</span>; <span class="co">-- all good, and you could&#39;ve committed this first as well</span></span></code></pre></div>
+<p>For postgres to detect a serialization anomaly, there needs to be a
+cycle* in rw-antidependencies (a rw-antidependency is when one
+transaction reads something whose results would be different due to
+another concurrent transaction modifying data). Since there are only two
+concurrent transactions and left-txn doesn’t read any data modified by
+right-txn, there can be no such cycle (notice there is a
+rw-antidependency from <em>right-txn -&gt; left-txn</em> due to reading
+0 results with <code>id=1000001</code>). What if repeat the transactions
+above but change the Ids so they’re closer to each other? Instead of 5,
+1000001 and 1000002 let’s use 5, 4 and 200.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">DELETE</span> <span class="kw">FROM</span> test_table <span class="kw">WHERE</span> <span class="kw">id</span><span class="op">&gt;</span><span class="dv">1000000</span>; <span class="co">-- clean up</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="cf">BEGIN</span> <span class="kw">ISOLATION</span> <span class="kw">LEVEL</span> <span class="kw">SERIALIZABLE</span>;</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>                                                                        <span class="cf">BEGIN</span> <span class="kw">ISOLATION</span> <span class="kw">LEVEL</span> <span class="kw">SERIALIZABLE</span>;</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="kw">SELECT</span> <span class="op">*</span> <span class="kw">FROM</span> test_table <span class="kw">WHERE</span> <span class="kw">id</span><span class="op">=</span><span class="dv">5</span>;                                                 </span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="co">-- 0 results</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>                                                                         </span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>                                                                        <span class="kw">SELECT</span> <span class="op">*</span> <span class="kw">FROM</span> test_table <span class="kw">WHERE</span> <span class="kw">id</span><span class="op">=</span><span class="dv">4</span>;</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>                                                                        <span class="co">-- 0 results</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="kw">INSERT</span> <span class="kw">INTO</span> test_table (<span class="kw">id</span>, name) <span class="kw">VALUES</span> (<span class="dv">4</span>, <span class="st">&#39;something&#39;</span>);</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="co">-- INSERT 0 1</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>                                                                        <span class="kw">INSERT</span> <span class="kw">INTO</span> test_table (<span class="kw">id</span>, name) <span class="kw">VALUES</span> (<span class="dv">200</span>, <span class="st">&#39;something&#39;</span>);</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>                                                                        <span class="co">-- INSERT 0 1</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>                                                                        <span class="kw">COMMIT</span>; <span class="co">-- all good</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a><span class="kw">COMMIT</span>;</span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>ERROR:  could <span class="kw">not</span> serialize <span class="kw">access</span> due <span class="kw">to</span> <span class="kw">read</span><span class="op">/</span><span class="kw">write</span> dependencies among transactions</span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>DETAIL:  Reason code: Canceled <span class="kw">on</span> identification <span class="kw">as</span> a pivot, during <span class="kw">commit</span> attempt.</span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>HINT:  <span class="kw">The</span> <span class="kw">transaction</span> might succeed <span class="cf">if</span> retried.</span></code></pre></div>
+<p>We just replaced some Ids but it is still true that left-txn does not
+read any data modified by right-txn. So why does this fail? The answer
+is that postgres checks aren’t perfectly precise. There is a matter of
+granularity. Let’s look in more detail.</p>
+<h3 id="predicate-locks">Predicate locks</h3>
+<p>Every time you read data from a table inside a serializable
+transaction, postgres creates one or more predicate locks internally.
+“Lock” is a bit of a misnomer because unlike locks we’re familiar with,
+these don’t block other transactions from reading nor writing to the
+same data. Let’s see what that means:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="cf">BEGIN</span> <span class="kw">ISOLATION</span> <span class="kw">LEVEL</span> <span class="kw">SERIALIZABLE</span>;</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="kw">SELECT</span> <span class="fu">COUNT</span>(<span class="op">*</span>) <span class="kw">FROM</span> test_table;</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="kw">SELECT</span> locktype, <span class="kw">mode</span>, relname, page, tuple <span class="kw">FROM</span> pg_locks <span class="kw">LEFT</span> <span class="kw">JOIN</span> pg_class <span class="kw">ON</span> relation<span class="op">=</span>pg_class.<span class="kw">oid</span> <span class="kw">WHERE</span> <span class="kw">mode</span><span class="op">=</span><span class="st">&#39;SIReadLock&#39;</span>;</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a> locktype |    <span class="kw">mode</span>    |  relname   | page | tuple</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="co">----------+------------+------------+------+-------</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a> relation | SIReadLock | test_table |      |</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>(<span class="dv">1</span> <span class="kw">row</span>)</span></code></pre></div>
+<p>In <code>pg_locks</code> we can view predicate locks by checking for
+<code>mode=SIReadLock</code>. The one above is a <code>relation</code>
+predicate lock. It means our transaction read the contents of the entire
+table, so any concurrent transactions modifying any rows in the table
+will create a rw-antidependency from the writing transaction to our
+transaction above. Remember this is not sufficient to cancel one of the
+transactions: there needs to be a cycle* for a serialization anomaly to
+happen, not just one rw-antidependency.</p>
+<p>Let’s look at predicate locks for the two transactions we tried
+earlier where one of them failed. Right before the first
+<code>commit</code> statement, what do predicate locks look like?</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">DELETE</span> <span class="kw">FROM</span> test_table <span class="kw">WHERE</span> <span class="kw">id</span><span class="op">=</span><span class="dv">200</span>; <span class="co">-- Cleanup before you try again</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="co">-- Now run both transactions again, but right before the first commit run:</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="kw">SELECT</span> locktype, <span class="kw">mode</span>, relname, page, tuple <span class="kw">FROM</span> pg_locks <span class="kw">LEFT</span> <span class="kw">JOIN</span> pg_class <span class="kw">ON</span> relation<span class="op">=</span>pg_class.<span class="kw">oid</span> <span class="kw">WHERE</span> <span class="kw">mode</span><span class="op">=</span><span class="st">&#39;SIReadLock&#39;</span>;</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a> locktype |    <span class="kw">mode</span>    |     relname     | page | tuple</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co">----------+------------+-----------------+------+-------</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a> page     | SIReadLock | test_table_pkey |    <span class="dv">1</span> |</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a> page     | SIReadLock | test_table_pkey |    <span class="dv">1</span> |</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>(<span class="dv">2</span> <span class="kw">rows</span>)</span></code></pre></div>
+<p>Notice two very important things:<br />
+- The predicate locks are on the index, not the table.<br />
+- <code>tuple</code> is NULL. The predicate locks are on all of page
+1.</p>
+<p>This means postgres doesn’t know left-txn only tried to read a row
+with <code>id=5</code> and right-txn only tried to read a row with
+<code>id=4</code>. Instead, it thinks any modifications to any rows that
+live within index page 1 could’ve affected the <code>SELECT</code>
+statements from both transactions. Because Ids 4,5, and 200 would all
+live in page 1, postgres thinks there are rw-antidependencies from both
+transactions to one another. This is clearly a false positive.</p>
+<p>This is a problem of granularity. Sadly, while for tables there are
+tuple-level locks, for indexes the smallest granularity is a page. Which
+for a btree index of integers can include up to ~367 entries according
+to the <a
+href="https://www.postgresql.org/docs/16/pageinspect.html#PAGEINSPECT-B-TREE-FUNCS">pageinspect</a>
+extension.</p>
+<h3 id="predicate-lock-promotion">Predicate lock promotion</h3>
+<p>Suppose you select a few rows:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>VACUUM (<span class="kw">FULL</span>) test_table;</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="cf">BEGIN</span> <span class="kw">ISOLATION</span> <span class="kw">LEVEL</span> <span class="kw">SERIALIZABLE</span>;</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="kw">SELECT</span> <span class="fu">COUNT</span>(<span class="op">*</span>) <span class="kw">FROM</span> test_table <span class="kw">WHERE</span> <span class="kw">id</span> <span class="kw">BETWEEN</span> <span class="dv">10000</span> <span class="kw">AND</span> <span class="dv">10002</span>;</span></code></pre></div>
+<p>If you query locks now, you will see 3 relation tuple-level predicate
+locks and one index page-level predicate lock. If you select just one
+more row - the one with Id 10003 - and query locks again, postgres will
+promote what would be 3 tuple-level locks to one page-level lock:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a> locktype |    <span class="kw">mode</span>    |     relname     | pid  | page | tuple</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="co">----------+------------+-----------------+------+------+-------</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a> tuple    | SIReadLock | test_table      | <span class="dv">7683</span> | <span class="dv">5400</span> |    <span class="dv">23</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a> page     | SIReadLock | test_table      | <span class="dv">7683</span> |   <span class="dv">48</span> |</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a> page     | SIReadLock | test_table_pkey | <span class="dv">7683</span> |   <span class="dv">26</span> |</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>(<span class="dv">3</span> <span class="kw">rows</span>)</span></code></pre></div>
+<p>According to pageinspect, for this table (which granted, has very few
+columns) one page contains 187 rows. That is, the granularity of our
+predicate locks went from 3 to 187 rows because of one more selected
+row. This might be fine for your workloads, but it’s not a very smooth
+transition.</p>
+<p>This is configurable through the <a
+href="https://www.postgresql.org/docs/current/runtime-config-locks.html#GUC-MAX-PRED-LOCKS-PER-PAGE">max_pred_locks_per_page</a>
+setting, and there are more <code>max_pred_*</code> settings worth
+looking at because the default might be too low for your workloads.</p>
+<p>There are other interesting things about SSI in postgres, though I’m
+not sure I’ll find the motivation to keep writing about them. HOT
+updates, predicate locks being replaced by “normal” locks on writes, and
+some things I still don’t understand like postgres being smarter than
+what <code>pg_locks</code> might make you think it could be.</p>
+<h3 id="references">References</h3>
+<ul>
+<li><a
+href="https://github.com/postgres/postgres/blob/master/src/backend/storage/lmgr/README-SSI">README-SSI</a>
+in postgres’s codebase discusses the implementation and also has a very
+interesting “Several optimizations are possible” section.</li>
+<li>Dan Ports’s and Kevin Grittner’s <a
+href="https://arxiv.org/pdf/1208.4179">SSI paper</a>.</li>
+<li>pg-hackers <a
+href="https://www.postgresql.org/message-id/flat/CAEepm%3D2GK3FVdnt5V3d%2Bh9njWipCv_fNL%3DwjxyUhzsF%3D0PcbNg%40mail.gmail.com">discussion
+thread</a> of Thomas Munro’s unmerged patches with some improvements to
+postgres’ SSI implementation.</li>
+</ul>
+<p>*: Postgresql doesn’t really check for a cycle. Rather it checks for
+two adjacent rw-antidependencies in a directed graph where transactions
+are nodes and rw-antidependencies are edges, with the transaction at the
+end of the second edge being the first to commit. This can lead to false
+positives in exchange for being a cheaper check. See Chapter 3.3 in <a
+href="https://arxiv.org/pdf/1208.4179">the paper</a>.</p>
+
+<div id="disqus_thread"></div>
+<script>
+
+/**
+*  RECOMMENDED CONFIGURATION VARIABLES: EDIT AND UNCOMMENT THE SECTION BELOW TO INSERT DYNAMIC VALUES FROM YOUR PLATFORM OR CMS.
+*  LEARN WHY DEFINING THESE VARIABLES IS IMPORTANT: https://disqus.com/admin/universalcode/#configuration-variables*/
+
+var disqus_config = function () {
+this.page.url = 'https://mzabani.github.io/posts/2024-12-08-pg-ssi-limitations.html';  // Replace PAGE_URL with your page's canonical URL variable
+this.page.identifier = '/posts/2024-12-08-pg-ssi-limitations.html'; // Replace PAGE_IDENTIFIER with your page's unique identifier variable
+this.page.title = "Limitations of SSI's implementation in PostgreSQL";
+};
+
+(function() { // DON'T EDIT BELOW THIS LINE
+var d = document, s = d.createElement('script');
+s.src = '//mzabani.disqus.com/embed.js';
+s.setAttribute('data-timestamp', +new Date());
+(d.head || d.body).appendChild(s);
+})();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+        </div>
+        <div id="footer">
+            Site generated by
+            <a href="http://jaspervdj.be/hakyll">Hakyll</a>
+        </div>
+    </body>
+</html>
+

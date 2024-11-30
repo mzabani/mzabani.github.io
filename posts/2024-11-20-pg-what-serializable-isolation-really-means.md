@@ -26,7 +26,7 @@ Suppose you manage a hospital and you you must always have at least one doctor o
 
 ```sql
 CREATE TABLE doctors (id SERIAL PRIMARY KEY, name text, oncall BOOL);
-INSERT INTO doctors (name, oncall) VALUES ('Alice', TRUE), ('Joe', TRUE) ('Bob', FALSE);
+INSERT INTO doctors (name, oncall) VALUES ('Alice', TRUE), ('Joe', TRUE), ('Bob', FALSE);
 ```
 
 Now you write the endpoint that takes a doctor off call (in some pseudo-code):

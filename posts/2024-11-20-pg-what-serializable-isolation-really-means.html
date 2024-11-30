@@ -78,7 +78,7 @@ one doctor on call at any one time. Bob, Alice and Joe are your doctors,
 and initially Alice and Joe are on call but Bob isn’t.</p>
 <div class="sourceCode" id="cb1"><pre
 class="sourceCode sql"><code class="sourceCode sql"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> doctors (<span class="kw">id</span> SERIAL <span class="kw">PRIMARY</span> <span class="kw">KEY</span>, name text, oncall BOOL);</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">INSERT</span> <span class="kw">INTO</span> doctors (name, oncall) <span class="kw">VALUES</span> (<span class="st">&#39;Alice&#39;</span>, <span class="kw">TRUE</span>), (<span class="st">&#39;Joe&#39;</span>, <span class="kw">TRUE</span>) (<span class="st">&#39;Bob&#39;</span>, <span class="kw">FALSE</span>);</span></code></pre></div>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">INSERT</span> <span class="kw">INTO</span> doctors (name, oncall) <span class="kw">VALUES</span> (<span class="st">&#39;Alice&#39;</span>, <span class="kw">TRUE</span>), (<span class="st">&#39;Joe&#39;</span>, <span class="kw">TRUE</span>), (<span class="st">&#39;Bob&#39;</span>, <span class="kw">FALSE</span>);</span></code></pre></div>
 <p>Now you write the endpoint that takes a doctor off call (in some
 pseudo-code):</p>
 <div class="sourceCode" id="cb2"><pre
@@ -228,9 +228,9 @@ Dan Ports’s paper on SSI in PostgreSQL</a></p>
 *  LEARN WHY DEFINING THESE VARIABLES IS IMPORTANT: https://disqus.com/admin/universalcode/#configuration-variables*/
 
 var disqus_config = function () {
-this.page.url = 'https://mzabani.github.io/posts/2024-02-04-splitting-expenses.html';  // Replace PAGE_URL with your page's canonical URL variable
-this.page.identifier = '/posts/2024-02-04-splitting-expenses.html'; // Replace PAGE_IDENTIFIER with your page's unique identifier variable
-this.page.title = 'Algorithms to split group expenses';
+this.page.url = 'https://mzabani.github.io/posts/2024-11-20-pg-what-serializable-isolation-really-means.html';  // Replace PAGE_URL with your page's canonical URL variable
+this.page.identifier = '/posts/2024-11-20-pg-what-serializable-isolation-really-means.html'; // Replace PAGE_IDENTIFIER with your page's unique identifier variable
+this.page.title = 'What Serializable isolation really means in PostgreSQL';
 };
 
 (function() { // DON'T EDIT BELOW THIS LINE
