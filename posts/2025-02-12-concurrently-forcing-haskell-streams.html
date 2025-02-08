@@ -1,0 +1,429 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <title>Marcelo Zabani's Blog - Concurrently processing streams in Haskell</title>
+        <link rel="stylesheet" type="text/css" href="../css/default.css" />
+        <link rel="stylesheet" type="text/css" href="../css/syntax.css" />
+    </head>
+    <body>
+        <div id="header">
+            <div id="logo">
+                <a href="../">Marcelo Zabani's Blog</a>
+            </div>
+            <div id="navigation">
+                <a href="../">Home</a>
+            </div>
+        </div>
+
+        <div id="content">
+            <h1>Concurrently processing streams in Haskell</h1>
+
+            <div class="info">
+    Posted on February  12, 2025
+    
+</div>
+
+<p>This article covers how I made <a
+href="https://github.com/mzabani/codd">codd</a>, a PostgreSQL migration
+application tool written by me in Haskell, speed up the application of a
+<code>COPY</code> statement with 5.65 million lines from 12.1s to 9.8s
+(on my machine), a 19% reduction in time, bringing it much closer to the
+time the official <code>psql</code> tool takes to apply the same
+migration - 9.4s.</p>
+<p>The nice thing is that the abstraction used here is hopefully
+reusable across a wider range of applications and is easy to apply.</p>
+<h2 id="the-actual-problem-and-the-benchmarks-baseline">The actual
+problem and the benchmark’s baseline</h2>
+<p>Codd reads SQL migrations from disk in streaming fashion. It then
+parses the text stream into separate SQL statements, keeping one SQL
+statement in memory at a time so arbitrarily large migrations can be
+added without blowing up memory usage. For <code>COPY</code> statements
+it uses a fixed size buffer for the body of the <code>COPY</code>
+statement and therefore also reads it (and sends it to postgres) in
+chunks. We use the <a
+href="https://hackage.haskell.org/package/streaming">streaming</a>
+library.</p>
+<p>Basically, codd has a parsing function that takes in a .sql’s file as
+a Stream of Text and returns a Stream of SQL statements, as such:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ot">parseSqlPiecesStreaming ::</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Monad</span> m <span class="ot">=&gt;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Stream</span> (<span class="dt">Of</span> <span class="dt">Text</span>) m () <span class="ot">-&gt;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Stream</span> (<span class="dt">Of</span> <span class="dt">SqlPiece</span>) m ()</span></code></pre></div>
+<p>For our purposes you can think of <code>SqlPiece</code> as one
+single/whole individual SQL statement or as a chunk of a
+<code>COPY</code> statement’s body. Postgres doesn’t receive statements
+in incomplete chunks so codd needs to separate statement boundaries to
+send them to the server one at a time (there’s a bit more to this, but
+it doesn’t matter for our purposes).</p>
+<p>Then there is of course a function in codd that consumes the
+<code>Stream</code> of <code>SqlPiece</code> and applies them one at a
+time. For a 116MB sql migration with a single COPY statement with
+approximately 5.65 million lines, codd currently takes
+<code>12.1s ± 0.27s</code> to apply it (it’s actually doing a bit more
+than just applying the migration, but not much). For comparison,
+<code>psql</code> takes <code>9.4s ± 0.06s</code>, ~22.5% less.</p>
+<p>Profiling and optimizing codd’s sql parser should be fun, but I
+wanted to explore a different idea: what if we keep reading from disk
+and running the parser while we wait for postgres to process statements
+we apply¹? Codd isn’t currently doing anything while it waits for
+postgres, after all.</p>
+<h2 id="forcing-streams-concurrently">Forcing Streams concurrently</h2>
+<p>In order to read and parse the next <code>SqlPiece</code> from disk
+while postgresql is applying a statement, I thought I could just force
+the Stream’s next element concurrently ahead of time. I couldn’t find
+such a function in the <a
+href="https://hackage.haskell.org/package/streaming">streaming</a>
+library so I wrote one - I’ll link to it later in this post.</p>
+<p>To clarify, this is not some kind of <code>mapConcurrently</code>
+function because we still have to send each statement to postgresql
+sequentially, and such ordering seems difficult to implement on top of
+<code>mapConcurrently</code>, at least at a glance.</p>
+<p>This is about forcing the Stream of <code>SqlPiece</code>
+concurrently to what the consumer of said Stream is doing, so that the
+next element of the Stream has higher chance of already having been
+computed/fetched when it’s demanded. The signature of this function
+would thus be similar to an identity function:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ot">forceStreamConcurrently ::</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Monad</span> m <span class="ot">=&gt;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Stream</span> (<span class="dt">Of</span> a) m r <span class="ot">-&gt;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Stream</span> (<span class="dt">Of</span> a) m r</span></code></pre></div>
+<p>The “simple” implementation with a blocking bounded queue made total
+time go from 12.s to 11.4s even with <code>+RTS -N1</code>. Here’s some
+pseudo-code of the application loop with such an implementation
+(pseudo-code ended up being clearer than Haskell here to better convey
+the idea):</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>queue <span class="op">=</span> new_queue { size <span class="op">=</span> <span class="dv">1</span> }</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="co"># A background thread keeps on parsing and pushing to the queue</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>forkBackgroundThread {</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="cf">while</span> (sqlPiece <span class="op">=</span> parse_next_SqlPiece())</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    queue.append(sqlPiece) <span class="co"># Will block when adding to a full queue</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Meanwhile we keep on applying parsed statements/chunks</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="cf">while</span> (sqlPiece <span class="op">=</span> dequeue(queue))</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>  send_to_postgres(sqlPiece)</span></code></pre></div>
+<h2 id="forcing-more-elements-ahead-of-time">Forcing more elements ahead
+of time</h2>
+<p>Why force only one future statement concurrently? By forcing
+<em>two</em> future elements of the stream ahead of time concurrently,
+total time went from 12.1s to 10s, a better improvement. The forcing
+function now has the following type:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ot">forceStreamConcurrently ::</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Monad</span> m <span class="ot">=&gt;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Natural</span> <span class="ot">-&gt;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Stream</span> (<span class="dt">Of</span> a) m r <span class="ot">-&gt;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Stream</span> (<span class="dt">Of</span> a) m r</span></code></pre></div>
+<p>But then I tried increasing the number of Stream elements forced
+concurrently, things didn’t always get better. Here are some times
+collected in terms of how many elements we force concurrently ahead of
+time:</p>
+<table>
+<colgroup>
+<col style="width: 6%" />
+<col style="width: 18%" />
+<col style="width: 18%" />
+<col style="width: 18%" />
+<col style="width: 18%" />
+<col style="width: 18%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th></th>
+<th>0</th>
+<th>1</th>
+<th>2</th>
+<th>3</th>
+<th>4</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Time</td>
+<td>11.60s ± 0.19s</td>
+<td>10.02s ± 0.17s</td>
+<td>11.23s ± 0.66s</td>
+<td>10.10s ± 0.10s</td>
+<td>10.01s ± 0.18s</td>
+</tr>
+</tbody>
+</table>
+<p>Note that <code>n=0</code> means the queue of elements has size 1,
+meaning <em>it is concurrent</em>: when we remove a
+<code>SqlPiece</code> from the queue and send it to postgres, there is
+available work to be done by parsing the next <code>SqlPiece</code>. In
+fact with <code>n=0</code> the code will always force
+<strong>two</strong> elements at a time, only it’ll block when trying to
+add the second element to the queue (look at the pseudo-code from
+earlier to see how). Remember this as it’s relevant for one kind of risk
+assessment that we’ll discuss in the next section.</p>
+<p>It seems that n=0 is a modest improvement and n=2 is quite bad. n=1,
+3 or 4 are all quite good. I reran some of these to make sure this
+wasn’t noise, so why is 2 worse than the others?</p>
+<h2 id="why-is-n2-slow">Why is n=2 slow?</h2>
+<p>Honestly, I don’t know. But with <code>+RTS -N1</code> there is a
+single runtime capability that must alternate between parsing and
+sending SQL chunks to postgres. Ideally this capability would switch to
+sending SQL chunks to postgres immediately when postgres is ready for
+more and at least one chunk is already parsed. Any elapsed time with
+postgres waiting and one parsed SQL chunk in the queue is wasted
+time.</p>
+<p>But of course we have no control of the runtime’s scheduler. And so
+my immediate feeling is that choosing a queue size is a gamble, and that
+we might be relying on such complex runtime scheduling characteristics
+that maybe the best values for <code>n</code> would be different on a
+different computer, or with a different SSD, or with different
+networking.</p>
+<p>And since we’re talking about risks, remember that even with
+<code>n=0</code> our code will always try to force <em>two</em> elements
+of the Stream concurrently. Of course the same risks exist for any queue
+size, but the point is that not even <code>n=0</code> is a safe value,
+one that’d “force” the scheduler to not let postgres idle.</p>
+<p>Unless of course we use STM (Software Transactional Memory) to
+<em>block</em> immediately after the queue is full. That would make n=0
+safe. So I added this to the code that forces the stream in a forked
+thread:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>STM.atomically <span class="op">$</span> <span class="kw">do</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- Don&#39;t do work until the element is removed from the queue</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  l <span class="ot">&lt;-</span> STM.lengthTBQueue evaluatedElements</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  when (l <span class="op">==</span> futureElementsQueueSize <span class="op">+</span> <span class="dv">1</span>) STM.retrySTM</span></code></pre></div>
+<p>But now <code>n=0</code> went from 11.60s to 12.48s, so I’m guessing
+STM related costs made this attempt not worthwhile.</p>
+<h2 id="giving-up">“Giving up”</h2>
+<p>Despite the real problem not having been pinned down, my bets are
+still that to make this work we’d need finer control of runtime
+scheduling. And of course I don’t want to or even know how to go there.
+I wonder how much it matters that <a
+href="https://github.com/haskellari/postgresql-libpq">postgresql-libpq</a>
+makes FFI calls to libpq under the hood, as opposed to being a pure
+Haskell implementation. If you know GHC’s runtime well, please
+comment!</p>
+<p>So one “easy” alternative is instead to use two capabilities,
+i.e. <code>+RTS -N2</code>, at which point it’s almost as if we’ll have
+one CPU core working on reading and parsing SQL chunks from disk and
+another CPU core ready to send them to postgres. It feels a bit wasteful
+since sending SQL chunks to postgres is just a network call, but let’s
+see how times change with 2 capabilities:</p>
+<table>
+<colgroup>
+<col style="width: 6%" />
+<col style="width: 18%" />
+<col style="width: 18%" />
+<col style="width: 18%" />
+<col style="width: 18%" />
+<col style="width: 18%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th></th>
+<th>0</th>
+<th>1</th>
+<th>2</th>
+<th>3</th>
+<th>4</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>-N1</td>
+<td>11.60s ± 0.19s</td>
+<td>10.02s ± 0.17s</td>
+<td>11.23s ± 0.66s</td>
+<td>10.10s ± 0.10s</td>
+<td>10.01s ± 0.18s</td>
+</tr>
+<tr class="even">
+<td>-N2</td>
+<td>10.94s ± 0.20s</td>
+<td>9.87s ± 0.15s</td>
+<td>10.29s ± 0.17s</td>
+<td>9.80s ± 0.19s</td>
+<td>9.86s ± 0.13s</td>
+</tr>
+</tbody>
+</table>
+<p>This is not only faster in all cases, it also feels more protected
+against diverse disk+network+CPU combinations by affording us the
+possibility of choosing higher values of <code>n</code> bounded only by
+maximum memory usage (given this will keep more SQL chunks in memory at
+any given time). But the typical SQL chunk or statement is at most a few
+KB long (and codd limits chunks of <code>COPY</code> body to 64KB) so
+it’s not super concerning.</p>
+<p>The sad bit is that <code>-N2</code> makes the app’s peak memory
+double. But that’s still going from 6MB to 12MB in my benchmarks, so I
+think it’s worth the speed-up we get with e.g. <code>n=3</code>.</p>
+<h2 id="making-this-function-a-less-leaky-abstraction">Making this
+function a less leaky abstraction</h2>
+<p>There are cases where even a well implemented <code>forceStreamConcurrently</code> function can change
+program behaviour:</p>
+<h3 id="not-consuming-the-returned-stream-completely">1 - Not consuming
+the returned stream completely</h3>
+<p>Take this code that launches 2 missiles:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>S.take <span class="dv">2</span> <span class="op">$</span> S.repeat launchMissile</span></code></pre></div>
+<p>If you use <code>forceStreamConcurrently</code> with e.g. 3 elements
+forced ahead of time concurrently, you will actually fire more than 2
+missiles.</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- This fires more than just 2 missiles</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>S.take <span class="dv">2</span> <span class="op">$</span> forceStreamConcurrently <span class="op">$</span> S.repeat launchMissile</span></code></pre></div>
+<p>You could also miss an exception thrown by an effect fired later in
+the Stream.</p>
+<p>The linear-base package has <a
+href="https://hackage.haskell.org/package/linear-base-0.4.0/docs/Streaming-Linear.html">linear
+streams</a> which could be used to mostly fix² this issue, IIUC. I
+didn’t do so with codd because I’m not yet familiarized with Linear
+Types and this function is only used in one place, but you may want to
+depending on how exposed this function will be in your codebase.</p>
+<h3 id="streams-side-effects-change-the-world-in-time-sensitive-ways">2
+- Stream’s side-effects change the world in time-sensitive ways</h3>
+<p>If you’re querying an external endpoint for each stream element like
+this:</p>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- Wait 5s before yielding each element in the stream to avoid being rate-limited</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>S.delays <span class="dv">5</span> streamWithHttpRequestsToThirdPartyService</span></code></pre></div>
+<p>Then you might be rate-limited by the third party service if you do
+this:</p>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>S.delays <span class="dv">5</span> <span class="op">$</span> forceStreamConcurrently streamWithHttpRequestsToThirdPartyService</span></code></pre></div>
+<h3
+id="the-side-effects-of-downstream-consumers-interfere-with-the-side-effects-of-the-forced-stream">3
+- The side-effects of downstream consumers interfere with the
+side-effects of the forced stream</h3>
+<p>The effect of the code below is to append alternating lines to a
+file:</p>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- This might not be valid Haskell nor a terminating program, but you get the point</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>withFile <span class="st">&quot;some-file.txt&quot;</span> <span class="op">$</span> \f <span class="ot">-&gt;</span> S.mapM (<span class="fu">const</span> <span class="op">$</span> appendLine <span class="st">&quot;A&quot;</span> f) <span class="op">$</span> S.repeat (<span class="fu">const</span> <span class="op">$</span> appendLine <span class="st">&quot;B&quot;</span> f)</span></code></pre></div>
+<p>Imagine <code>forceStreamConcurrently</code> somewhere there and you
+will see that <em>some-file.txt</em> can look different. This example in
+particular is why <code>forceStreamConcurrently</code> can’t be used
+carelessly at scale, IMO.</p>
+<h2 id="the-code">The code</h2>
+<p>Without further ado, the code. Most of the complexity has to do with
+cleaning up the background thread when the returned Stream is not
+consumed completely and with doing “the right thing” w.r.t. exceptions,
+but also making it possible to write a test for such behaviors. You
+could simplify this a bit if you don’t need to test proper thread
+cleanup.</p>
+<p>Do notice many of the imports here are from the <a
+href="https://hackage.haskell.org/package/unliftio">unliftio</a>
+library, not <code>base</code>.</p>
+<p>Feel free to copy it and use and/or modify it however you want, no
+need to mention this. I hope you find it useful.</p>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="ot">forceStreamConcurrently ::</span> <span class="kw">forall</span> m a r<span class="op">.</span> (<span class="dt">MonadUnliftIO</span> m) <span class="ot">=&gt;</span> <span class="dt">Natural</span> <span class="ot">-&gt;</span> <span class="dt">Stream</span> (<span class="dt">Of</span> a) m r <span class="ot">-&gt;</span> <span class="dt">Stream</span> (<span class="dt">Of</span> a) m r</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>forceStreamConcurrently <span class="ot">=</span> forceStreamConcurrentlyInspect <span class="dt">Nothing</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">NoMoreConsumersOfTheReturnedStreamException</span> <span class="ot">=</span> <span class="dt">NoMoreConsumersOfTheReturnedStreamException</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  <span class="kw">deriving</span> stock (<span class="dt">Show</span>)</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a><span class="kw">instance</span> <span class="dt">Exception</span> <span class="dt">NoMoreConsumersOfTheReturnedStreamException</span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a><span class="ot">forceStreamConcurrentlyInspect ::</span></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>  <span class="kw">forall</span> m a r<span class="op">.</span></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>  (<span class="dt">MonadUnliftIO</span> m) <span class="ot">=&gt;</span></span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- | Supply an empty MVar that will be written to iff the stream returned by this function is not consumed linearly</span></span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Maybe</span> (<span class="dt">MVar</span> ()) <span class="ot">-&gt;</span></span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Natural</span> <span class="ot">-&gt;</span></span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Stream</span> (<span class="dt">Of</span> a) m r <span class="ot">-&gt;</span></span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Stream</span> (<span class="dt">Of</span> a) m r</span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a>forceStreamConcurrentlyInspect returnedStreamNotConsumedLinearly futureElementsQueueSize stream <span class="ot">=</span> <span class="dt">S.Effect</span> <span class="op">$</span> <span class="kw">do</span></span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a>  <span class="kw">case</span> returnedStreamNotConsumedLinearly <span class="kw">of</span></span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a>    <span class="dt">Nothing</span> <span class="ot">-&gt;</span> <span class="fu">pure</span> ()</span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a>    <span class="dt">Just</span> mv <span class="ot">-&gt;</span> unlessM (isEmptyMVar mv) <span class="op">$</span> <span class="fu">error</span> <span class="st">&quot;Please supply an empty MVar to store the background thread&#39;s exit state&quot;</span></span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a><span class="ot">  evaluatedElements ::</span> <span class="dt">STM.TBQueue</span> (<span class="dt">Either</span> <span class="dt">SomeException</span> (<span class="dt">Either</span> r a)) <span class="ot">&lt;-</span> STM.newTBQueueIO (futureElementsQueueSize <span class="op">+</span> <span class="dv">1</span>)</span>
+<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a>  void <span class="op">$</span> forkIO <span class="op">$</span> <span class="kw">do</span></span>
+<span id="cb11-23"><a href="#cb11-23" aria-hidden="true" tabindex="-1"></a>    streamReturnOrException <span class="ot">&lt;-</span></span>
+<span id="cb11-24"><a href="#cb11-24" aria-hidden="true" tabindex="-1"></a>      try <span class="op">$</span></span>
+<span id="cb11-25"><a href="#cb11-25" aria-hidden="true" tabindex="-1"></a>        S.mapsM_</span>
+<span id="cb11-26"><a href="#cb11-26" aria-hidden="true" tabindex="-1"></a>          ( \(el <span class="op">:&gt;</span> eff) <span class="ot">-&gt;</span> <span class="kw">do</span></span>
+<span id="cb11-27"><a href="#cb11-27" aria-hidden="true" tabindex="-1"></a>              <span class="co">-- If the stream returned by this function isn&#39;t linearly consumed, garbage collection will make</span></span>
+<span id="cb11-28"><a href="#cb11-28" aria-hidden="true" tabindex="-1"></a>              <span class="co">-- writing to the TBQueue eventually throw a `BlockedIndefinitelyOnSTM` exception as this background thread</span></span>
+<span id="cb11-29"><a href="#cb11-29" aria-hidden="true" tabindex="-1"></a>              <span class="co">-- will be the only one still holding on to the associated TVars.</span></span>
+<span id="cb11-30"><a href="#cb11-30" aria-hidden="true" tabindex="-1"></a>              <span class="co">-- When that happens we don&#39;t want to try and write to the TBQueue again as it&#39;d block forever. We just want to</span></span>
+<span id="cb11-31"><a href="#cb11-31" aria-hidden="true" tabindex="-1"></a>              <span class="co">-- exit gracefully.</span></span>
+<span id="cb11-32"><a href="#cb11-32" aria-hidden="true" tabindex="-1"></a>              handleJust (\(<span class="ot">_ ::</span> <span class="dt">BlockedIndefinitelyOnSTM</span>) <span class="ot">-&gt;</span> <span class="dt">Just</span> ()) (\() <span class="ot">-&gt;</span> throwIO <span class="dt">NoMoreConsumersOfTheReturnedStreamException</span>) <span class="op">$</span> STM.atomically <span class="op">$</span> STM.writeTBQueue evaluatedElements (<span class="dt">Right</span> <span class="op">$</span> <span class="dt">Right</span> el)</span>
+<span id="cb11-33"><a href="#cb11-33" aria-hidden="true" tabindex="-1"></a>              <span class="fu">pure</span> eff</span>
+<span id="cb11-34"><a href="#cb11-34" aria-hidden="true" tabindex="-1"></a>          )</span>
+<span id="cb11-35"><a href="#cb11-35" aria-hidden="true" tabindex="-1"></a>          stream</span>
+<span id="cb11-36"><a href="#cb11-36" aria-hidden="true" tabindex="-1"></a>    <span class="kw">case</span> streamReturnOrException <span class="kw">of</span></span>
+<span id="cb11-37"><a href="#cb11-37" aria-hidden="true" tabindex="-1"></a>      <span class="dt">Left</span> (<span class="ot">ex ::</span> <span class="dt">SomeException</span>) <span class="ot">-&gt;</span> <span class="kw">do</span></span>
+<span id="cb11-38"><a href="#cb11-38" aria-hidden="true" tabindex="-1"></a>        <span class="kw">case</span> fromException ex <span class="kw">of</span></span>
+<span id="cb11-39"><a href="#cb11-39" aria-hidden="true" tabindex="-1"></a>          <span class="dt">Just</span> (<span class="ot">_ ::</span> <span class="dt">NoMoreConsumersOfTheReturnedStreamException</span>) <span class="ot">-&gt;</span></span>
+<span id="cb11-40"><a href="#cb11-40" aria-hidden="true" tabindex="-1"></a>            <span class="co">-- We don&#39;t rethrow to avoid top-level exception handlers from detecting this, which is handled behavior after all</span></span>
+<span id="cb11-41"><a href="#cb11-41" aria-hidden="true" tabindex="-1"></a>            <span class="kw">case</span> returnedStreamNotConsumedLinearly <span class="kw">of</span></span>
+<span id="cb11-42"><a href="#cb11-42" aria-hidden="true" tabindex="-1"></a>              <span class="dt">Nothing</span> <span class="ot">-&gt;</span> <span class="fu">pure</span> ()</span>
+<span id="cb11-43"><a href="#cb11-43" aria-hidden="true" tabindex="-1"></a>              <span class="dt">Just</span> mv <span class="ot">-&gt;</span></span>
+<span id="cb11-44"><a href="#cb11-44" aria-hidden="true" tabindex="-1"></a>                putMVar mv ()</span>
+<span id="cb11-45"><a href="#cb11-45" aria-hidden="true" tabindex="-1"></a>          <span class="dt">Nothing</span> <span class="ot">-&gt;</span></span>
+<span id="cb11-46"><a href="#cb11-46" aria-hidden="true" tabindex="-1"></a>            STM.atomically <span class="op">$</span> STM.writeTBQueue evaluatedElements (<span class="dt">Left</span> ex)</span>
+<span id="cb11-47"><a href="#cb11-47" aria-hidden="true" tabindex="-1"></a>      <span class="dt">Right</span> streamReturn <span class="ot">-&gt;</span></span>
+<span id="cb11-48"><a href="#cb11-48" aria-hidden="true" tabindex="-1"></a>        STM.atomically <span class="op">$</span> STM.writeTBQueue evaluatedElements (<span class="dt">Right</span> <span class="op">$</span> <span class="dt">Left</span> streamReturn)</span>
+<span id="cb11-49"><a href="#cb11-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-50"><a href="#cb11-50" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pure</span> <span class="op">$</span> go evaluatedElements</span>
+<span id="cb11-51"><a href="#cb11-51" aria-hidden="true" tabindex="-1"></a>  <span class="kw">where</span></span>
+<span id="cb11-52"><a href="#cb11-52" aria-hidden="true" tabindex="-1"></a>    unlessM f g <span class="ot">=</span></span>
+<span id="cb11-53"><a href="#cb11-53" aria-hidden="true" tabindex="-1"></a>      f <span class="op">&gt;&gt;=</span> \<span class="kw">case</span></span>
+<span id="cb11-54"><a href="#cb11-54" aria-hidden="true" tabindex="-1"></a>        <span class="dt">True</span> <span class="ot">-&gt;</span> <span class="fu">pure</span> ()</span>
+<span id="cb11-55"><a href="#cb11-55" aria-hidden="true" tabindex="-1"></a>        <span class="dt">False</span> <span class="ot">-&gt;</span> g</span>
+<span id="cb11-56"><a href="#cb11-56" aria-hidden="true" tabindex="-1"></a><span class="ot">    go ::</span> <span class="dt">STM.TBQueue</span> (<span class="dt">Either</span> <span class="dt">SomeException</span> (<span class="dt">Either</span> r a)) <span class="ot">-&gt;</span> <span class="dt">Stream</span> (<span class="dt">Of</span> a) m r</span>
+<span id="cb11-57"><a href="#cb11-57" aria-hidden="true" tabindex="-1"></a>    go evaluatedElements <span class="ot">=</span> <span class="dt">S.Effect</span> <span class="op">$</span> <span class="kw">do</span></span>
+<span id="cb11-58"><a href="#cb11-58" aria-hidden="true" tabindex="-1"></a>      nextEl <span class="ot">&lt;-</span> STM.atomically <span class="op">$</span> STM.readTBQueue evaluatedElements</span>
+<span id="cb11-59"><a href="#cb11-59" aria-hidden="true" tabindex="-1"></a>      <span class="fu">pure</span> <span class="op">$</span> <span class="kw">case</span> nextEl <span class="kw">of</span></span>
+<span id="cb11-60"><a href="#cb11-60" aria-hidden="true" tabindex="-1"></a>        <span class="dt">Right</span> (<span class="dt">Right</span> el) <span class="ot">-&gt;</span> <span class="dt">S.Step</span> (el <span class="op">:&gt;</span> go evaluatedElements)</span>
+<span id="cb11-61"><a href="#cb11-61" aria-hidden="true" tabindex="-1"></a>        <span class="dt">Right</span> (<span class="dt">Left</span> r) <span class="ot">-&gt;</span> <span class="dt">S.Return</span> r</span>
+<span id="cb11-62"><a href="#cb11-62" aria-hidden="true" tabindex="-1"></a>        <span class="dt">Left</span> ex <span class="ot">-&gt;</span> <span class="dt">S.Effect</span> <span class="op">$</span> throwIO ex</span></code></pre></div>
+<h2 id="footnotes">Footnotes</h2>
+<ol type="1">
+<li><p>There is a postgres setting called
+<code>standard_conforming_strings</code> which can change the behaviour
+of the parser, so to correctly parse SQL we’d have to wait for postgres
+to return before parsing the next statement given that users can run
+<code>SET standard_conforming_strings TO on/off</code>. For now codd
+does not support the (non-default) value of <code>off</code>, though it
+could apply this optimization only to chunks of <code>COPY</code> in the
+future where it matters more and support the setting fully.</p></li>
+<li><p>A linear stream might ensure all side-effects run the same way
+they would without <code>forceStreamConcurrently</code>, but I’m not
+sure if it’s stronger than necessary because we only need all stream
+elements to be <em>yielded</em>, not that each such element is also
+consumed linearly, which I think is what a linear stream is? Corrections
+welcome.</p></li>
+</ol>
+
+<div id="disqus_thread"></div>
+<script>
+
+/**
+*  RECOMMENDED CONFIGURATION VARIABLES: EDIT AND UNCOMMENT THE SECTION BELOW TO INSERT DYNAMIC VALUES FROM YOUR PLATFORM OR CMS.
+*  LEARN WHY DEFINING THESE VARIABLES IS IMPORTANT: https://disqus.com/admin/universalcode/#configuration-variables*/
+
+var disqus_config = function () {
+this.page.url = 'https://mzabani.github.io/posts/2025-02-12-concurrently-forcing-haskell-streams.html';  // Replace PAGE_URL with your page's canonical URL variable
+this.page.identifier = '/posts/2025-02-12-concurrently-forcing-haskell-streams.html'; // Replace PAGE_IDENTIFIER with your page's unique identifier variable
+this.page.title = "Concurrently processing streams in Haskell";
+};
+
+(function() { // DON'T EDIT BELOW THIS LINE
+var d = document, s = d.createElement('script');
+s.src = '//mzabani.disqus.com/embed.js';
+s.setAttribute('data-timestamp', +new Date());
+(d.head || d.body).appendChild(s);
+})();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+        </div>
+        <div id="footer">
+            Site generated by
+            <a href="http://jaspervdj.be/hakyll">Hakyll</a>
+        </div>
+    </body>
+</html>
+
