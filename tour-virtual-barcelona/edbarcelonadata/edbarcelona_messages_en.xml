@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<krpano>
+
+<!-- ************************ -->
+<!--         Messages         -->
+<!-- ************************ -->
+
+  <data name="en_project_title"><![CDATA[]]></data>
+
+
+
+  <data name="en_pano2033_title"><![CDATA[Living]]></data>
+  <data name="en_spotpoint2044_tooltip"><![CDATA[Sacada]]></data>
+  <data name="en_spotpoint2045_tooltip"><![CDATA[Quarto Menina]]></data>
+  <data name="en_spotpoint2046_tooltip"><![CDATA[Suíte Casal]]></data>
+  <data name="en_spotpoint2047_tooltip"><![CDATA[Quarto Menino]]></data>
+  <data name="en_spotpoint2048_tooltip"><![CDATA[Cozinha]]></data>
+  <data name="en_spotpoint2122_tooltip"><![CDATA[Banheiro]]></data>
+  <data name="en_spotpoint2123_tooltip"><![CDATA[Foto da Porta da cozinha]]></data>
+
+
+  <data name="en_pano2032_title"><![CDATA[Cozinha]]></data>
+  <data name="en_spotpoint2049_tooltip"><![CDATA[Living]]></data>
+  <data name="en_spotpoint2120_tooltip"><![CDATA[Vista da Porta da Cozinha]]></data>
+  <data name="en_spotpoint2121_tooltip"><![CDATA[Lavanderia]]></data>
+
+
+  <data name="en_pano2037_title"><![CDATA[Suíte Casal]]></data>
+  <data name="en_spotpoint2053_tooltip"><![CDATA[Living]]></data>
+  <data name="en_spotpoint2119_tooltip"><![CDATA[Banheiro]]></data>
+
+
+  <data name="en_pano2034_title"><![CDATA[Quarto Menina]]></data>
+  <data name="en_spotpoint2050_tooltip"><![CDATA[Living]]></data>
+  <data name="en_spotpoint2124_tooltip"><![CDATA[Banheiro]]></data>
+
+
+  <data name="en_pano2035_title"><![CDATA[Quarto Menino]]></data>
+  <data name="en_spotpoint2051_tooltip"><![CDATA[Living]]></data>
+
+
+  <data name="en_pano2036_title"><![CDATA[Sacada]]></data>
+  <data name="en_spotpoint2052_tooltip"><![CDATA[Living]]></data>
+
+
+	<data name="en_spotmap1084_tooltip"><![CDATA[]]></data>
+	<data name="en_spotmap1085_tooltip"><![CDATA[]]></data>
+	<data name="en_spotmap1086_tooltip"><![CDATA[]]></data>
+	<data name="en_spotmap1087_tooltip"><![CDATA[]]></data>
+	<data name="en_spotmap1088_tooltip"><![CDATA[]]></data>
+	<data name="en_spotmap1089_tooltip"><![CDATA[]]></data>
+	<data name="en_spotmap1090_tooltip"><![CDATA[]]></data>
+	<data name="en_spotmap1091_tooltip"><![CDATA[]]></data>
+	<data name="en_spotmap1092_tooltip"><![CDATA[]]></data>
+	<data name="en_spotmap1095_tooltip"><![CDATA[]]></data>
+	<data name="en_spotmap1096_tooltip"><![CDATA[]]></data>
+	<data name="en_spotmap1097_tooltip"><![CDATA[]]></data>
+
+
+	<data name="en_project_floor_title"><![CDATA[]]></data>
+	<data name="en_spotmap2055_tooltip"><![CDATA[Suíte Casal]]></data>
+	<data name="en_spotmap2056_tooltip"><![CDATA[Quarto Menino]]></data>
+	<data name="en_spotmap2057_tooltip"><![CDATA[Quarto Menina]]></data>
+	<data name="en_spotmap2058_tooltip"><![CDATA[Living]]></data>
+	<data name="en_spotmap2059_tooltip"><![CDATA[Cozinha]]></data>
+	<data name="en_spotmap2060_tooltip"><![CDATA[Sacada]]></data>
+
+
+  <data name="en_controlBar_classiczoomInTip"><![CDATA[Ampliar]]></data>
+  <data name="en_controlBar_classiczoomOutTip"><![CDATA[Afastar]]></data>
+  <data name="en_controlBar_classicmoveLeftTip"><![CDATA[Mover para  a esquerda]]></data>
+  <data name="en_controlBar_classicmoveRightTip"><![CDATA[Mover par a a direita]]></data>
+  <data name="en_controlBar_classicmoveUpTip"><![CDATA[Mover para cima]]></data>
+  <data name="en_controlBar_classicmoveDownTip"><![CDATA[Mover para baixo]]></data>
+  <data name="en_controlBar_classicautorotateOnTip"><![CDATA[Iniciar Auto-rotação]]></data>
+  <data name="en_controlBar_classicautorotateOffTip"><![CDATA[Parar Auto-rotação]]></data>
+  <data name="en_controlBar_classicgyroOnTip"><![CDATA[Activar Giroscópio]]></data>
+  <data name="en_controlBar_classicgyroOffTip"><![CDATA[Desactivar Giroscópio]]></data>
+  <data name="en_controlBar_classicgyroNotTip"><![CDATA[Gyroscope is unavailable]]></data>
+  <data name="en_controlBar_classicdisplayFloorplanTip"><![CDATA[Mostrar planta]]></data>
+  <data name="en_controlBar_classichideFloorplanTip"><![CDATA[Esconder Planta]]></data>
+  <data name="en_controlBar_classicshareTip"><![CDATA[Partilhar a Visita]]></data>
+  <data name="en_controlBar_classicdisplayHelpTip"><![CDATA[Mostrar Tela de Ajuda]]></data>
+  <data name="en_controlBar_classichideHelpTip"><![CDATA[Esconder Tela de Ajuda]]></data>
+  <data name="en_controlBar_classicdisplayControlsTip"><![CDATA[Mostrar controles]]></data>
+  <data name="en_controlBar_classichideControlsTip"><![CDATA[Esconder controles]]></data>
+  <data name="en_logowebsiteurl"><![CDATA[http://www.favarojr.com.br]]></data>
+  <data name="en_logotooltipText"><![CDATA[Abrir site]]></data>
+  <data name="en_contextmenuopenwebsitelabel1"><![CDATA[Desenvolvido por Favaro JR]]></data>
+  <data name="en_contextmenuwebsiteurl1"><![CDATA[http://www.favarojr.com.br]]></data>
+  <data name="en_contextmenuopenFsLabel"><![CDATA[Entrar para Tela Cheia]]></data>
+  <data name="en_contextmenucloseFsLabel"><![CDATA[Sair da Tela Cheia]]></data>
+  <data name="en_socialShareclose_text"><![CDATA[Fechar]]></data>
+  <data name="en_galleryplay_text"><![CDATA[Correr / Pausar]]></data>
+  <data name="en_gallerynavprev_text"><![CDATA[Anterior]]></data>
+  <data name="en_gallerynavnext_text"><![CDATA[Seguinte]]></data>
+  <data name="en_galleryfullscreen_text"><![CDATA[Modo de ecrã inteiro]]></data>
+  <data name="en_galleryclose_text"><![CDATA[Fechar]]></data>
+  <data name="en_gallerypicture_title0"><![CDATA[SAUNA]]></data>
+  <data name="en_gallerypicture_caption0"><![CDATA[]]></data>
+  <data name="en_gallerypicture_title1"><![CDATA[QUARTO DE HÓSPEDES]]></data>
+  <data name="en_gallerypicture_caption1"><![CDATA[]]></data>
+  <data name="en_gallerypicture_title2"><![CDATA[PISCINA]]></data>
+  <data name="en_gallerypicture_caption2"><![CDATA[]]></data>
+  <data name="en_gallerypicture_title3"><![CDATA[BANHEIRO CASAL]]></data>
+  <data name="en_gallerypicture_caption3"><![CDATA[]]></data>
+  <data name="en_gallerypicture_title4"><![CDATA[BANHEIRO CASAL]]></data>
+  <data name="en_gallerypicture_caption4"><![CDATA[]]></data>
+  <data name="en_gallerypicture_title5"><![CDATA[CLOSET]]></data>
+  <data name="en_gallerypicture_caption5"><![CDATA[]]></data>
+  <data name="en_gallerypicture_title6"><![CDATA[PISCINA COBERTA - SAUNA]]></data>
+  <data name="en_gallerypicture_caption6"><![CDATA[]]></data>
+  <data name="en_floorPlanmenu_label"><![CDATA[Seleccionar uma Planta]]></data>
+  <data name="en_logo1websiteurl"><![CDATA[]]></data>
+  <data name="en_logo1tooltipText"><![CDATA[Abrir site]]></data>
+
+
+  <data name="en_vr_setup_hmd0"><![CDATA[SELECIONAR O SEU HMD]]></data>
+  <data name="en_vr_setup_advanced"><![CDATA[CONFIGURAÇÕES AVANÇADAS]]></data>
+  <data name="en_vr_setup_title"><![CDATA[CONFIGURAÇÕES WEB VR]]></data>
+  <data name="en_vr_setup_dvn1"><![CDATA[Dispositivo:]]></data>
+  <data name="en_vr_setup_siz1"><![CDATA[Tamanho do ecrã:]]></data>
+  <data name="en_vr_setup_ipd1"><![CDATA[IPD:]]></data>
+  <data name="en_vr_setup_hmd1"><![CDATA[HMD:]]></data>
+  <data name="en_vr_setup_hmd3"><![CDATA[Personalizar]]></data>
+  <data name="en_vr_setup_cal"><![CDATA[Calibrar giroscópio]]></data>
+  <data name="en_vr_setup_sav"><![CDATA[SALVAR]]></data>
+  <data name="en_vr_setup_rst"><![CDATA[APAGAR]]></data>
+  <data name="en_vr_setup_simple"><![CDATA[SIMPLES]]></data>
+  <data name="en_vr_setup_cls"><![CDATA[FECHAR]]></data>
+  <data name="en_vr_setup_m31"><![CDATA[CONFIGURAÇÕES HMD]]></data>
+  <data name="en_vr_setup_fov1"><![CDATA[FOV:]]></data>
+  <data name="en_vr_setup_dst1"><![CDATA[Distorção:]]></data>
+  <data name="en_vr_setup_d2tx"><![CDATA[Distorção 2:]]></data>
+  <data name="en_vr_setup_vig1"><![CDATA[Recorte:]]></data>
+  <data name="en_vr_setup_cac1"><![CDATA[Aberração cromática:]]></data>
+  <data name="en_vr_setup_olp1"><![CDATA[Sobreposição:]]></data>
+  <data name="en_vr_setup_m35"><![CDATA[VOLTAR]]></data>
+  <data name="en_vr_setup_cb1"><![CDATA[GIROSCÓPIO]]></data>
+  <data name="en_vr_setup_cb2"><![CDATA[Coloque o seu dispositivo numa superfície plana e [br]estável, clique para CALIBRAR[br] para corrigir o movimento anormal do giroscópio.]]></data>
+  <data name="en_vr_setup_cb3"><![CDATA[CALIBRAR]]></data>
+  <data name="en_vr_setup_cb4"><![CDATA[APAGAR]]></data>
+  <data name="en_vr_setup_cb5"><![CDATA[VOLTAR]]></data>
+  <data name="en_vr_setup_cb6"><![CDATA[Calibrando]]></data>
+  <data name="en_vr_setup_cb7"><![CDATA[Calibração com sucesso]]></data>
+  <data name="en_vr_setup_cb8"><![CDATA[Calibração sem sucesso]]></data>
+  <data name="en_vr_setup_unavailable"><![CDATA[Modo VR[br]não está disponivel no seu dispositivo ]]></data>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</krpano>

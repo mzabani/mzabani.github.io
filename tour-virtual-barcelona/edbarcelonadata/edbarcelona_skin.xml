@@ -1,0 +1,1956 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<krpano version="1.19">
+
+  <!-- unsupported kind of display : PointMap -->
+
+
+    
+  <!-- Spot Style - Reto -->
+  <style name="IconReto"
+         url="%FIRSTXML%/spots/botoes_user_defaultpoint0111.png"
+         visible="false"
+         edge="bottom" ox="0" oy="0"
+         alpha="0.8"
+         onhover="onhoverIconReto"
+         onover="onoverIconReto"
+         onout="onoutIconReto"
+
+
+         />
+
+  <action name="onhoverIconReto">
+    showtooltip('hotspot');
+  </action>
+
+  <action name="onoverIconReto">
+tween(scale, 1.2);
+tween(alpha, 1);
+
+  </action>
+
+  <action name="onoutIconReto">
+    hideTooltip();
+    tween(scale, 1);
+    tween(alpha, 0.8);
+
+  </action>
+
+
+
+    
+  <!-- Spot Style - Default Point Spot Style 2 -->
+  <style name="IconDefaultPointSpotStyle2"
+         url="%FIRSTXML%/spots/ico-camera_copy_user_defaultpoint1.png"
+         visible="false"
+         onhover="onhoverIconDefaultPointSpotStyle2"
+         onout="onoutIconDefaultPointSpotStyle2"
+
+
+         />
+
+  <action name="onhoverIconDefaultPointSpotStyle2">
+    showtooltip('hotspot');
+  </action>
+
+
+  <action name="onoutIconDefaultPointSpotStyle2">
+    hideTooltip();
+
+
+
+  </action>
+
+
+
+<!-- ********** -->
+<!-- Barra de Controles Clássica -->
+<!-- id : controlBar_classic -->
+<!-- ********** -->
+
+  <krpano controlBar_classicbarbuilt="false" controlBar_classicbackgroundwidthwhenclosed="0" controlBar_classicbackgroundwidthwhenopened="0" controlBar_classicIsOpened="false" />
+  <events name="controlBar_classicevents" 
+    onxmlcomplete="controlBar_classicbuildMenuBar();" 
+
+
+    keep="true" />
+
+
+
+  <action name="controlBar_classicbuildMenuBar">
+    ifnot (controlBar_classicbarbuilt, controlBar_classicbuildMenu(); set(controlBar_classicbarbuilt, true););
+  </action>
+
+  <action name="controlBar_classicbuildMenu">
+    
+    set(controlBar_classicbutton_pos, 20);
+
+    set(layer[controlBar_classicbtn_hidecontrols].x, get(controlBar_classicbutton_pos));
+    set(layer[controlBar_classicbtn_showcontrols].x, get(controlBar_classicbutton_pos));
+    inc(controlBar_classicbutton_pos, 36);
+    add(controlBar_classicbackgroundwidthwhenclosed, get(controlBar_classicbutton_pos), 20);
+
+
+
+    if (device.desktop,
+      set(layer[controlBar_classicbtn_display_help].x, get(controlBar_classicbutton_pos));
+      set(layer[controlBar_classicbtn_close_help  ].x, get(controlBar_classicbutton_pos));
+      inc(controlBar_classicbutton_pos, 36);
+    );
+
+
+    set(layer[controlBar_classicbtn_share].x, get(controlBar_classicbutton_pos));
+    inc(controlBar_classicbutton_pos, 36);
+
+    set(layer[controlBar_classicbtn_display_floorplan].x, get(controlBar_classicbutton_pos));
+    set(layer[controlBar_classicbtn_hide_floorplan   ].x, get(controlBar_classicbutton_pos));
+    inc(controlBar_classicbutton_pos, 36);
+
+
+    set(layer[controlBar_classicbtn_autorotate_on ].x, get(controlBar_classicbutton_pos));
+    set(layer[controlBar_classicbtn_autorotate_off].x, get(controlBar_classicbutton_pos));
+    inc(controlBar_classicbutton_pos, 36);
+
+
+
+
+
+
+    if(plugin[gyroscope],
+      set(controlBar_classicDisplayGyroscopeButton, false);
+      if (device.tablet, set(controlBar_classicDisplayGyroscopeButton, true););
+      if (device.mobile, set(controlBar_classicDisplayGyroscopeButton, true););
+      if(controlBar_classicDisplayGyroscopeButton,
+        set(layer[controlBar_classicbtn_gyroscope_on ].x, get(controlBar_classicbutton_pos));
+        set(layer[controlBar_classicbtn_gyroscope_off].x, get(controlBar_classicbutton_pos));
+        set(layer[controlBar_classicbtn_gyroscope_not].x, get(controlBar_classicbutton_pos));
+        inc(controlBar_classicbutton_pos, 36);
+      );
+    );
+
+
+    if (device.desktop,
+        set(layer[controlBar_classicbtn_right].x, get(controlBar_classicbutton_pos));
+        inc(controlBar_classicbutton_pos, 36);
+        set(layer[controlBar_classicbtn_left].x, get(controlBar_classicbutton_pos));
+        inc(controlBar_classicbutton_pos, 36);
+    );
+    if (device.desktop,
+        set(layer[controlBar_classicbtn_down].x, get(controlBar_classicbutton_pos));
+        inc(controlBar_classicbutton_pos, 36);
+        set(layer[controlBar_classicbtn_up].x, get(controlBar_classicbutton_pos));
+        inc(controlBar_classicbutton_pos, 36);
+    );
+    if (device.desktop,
+        set(layer[controlBar_classicbtn_out].x, get(controlBar_classicbutton_pos));
+        inc(controlBar_classicbutton_pos, 36);
+        set(layer[controlBar_classicbtn_in].x, get(controlBar_classicbutton_pos));
+        inc(controlBar_classicbutton_pos, 36);
+    );
+
+
+    inc(controlBar_classicbutton_pos, 20);
+
+    set(controlBar_classicbackgroundwidthwhenopened, get(controlBar_classicbutton_pos));
+
+
+
+    
+    add(controlBar_classicVerifyVisibility, 20, 20);
+    if(controlBar_classicbackgroundwidthwhenopened == controlBar_classicVerifyVisibility,
+      set(controlBar_classicbackgroundwidthwhenopened, 0);
+
+
+    );
+
+	
+	
+  </action>
+
+	<events name="controlBar_classicStartTourEvents" onTourStart="controlBar_classicCallOnStartTour();" keep="true" />
+
+	<action name="controlBar_classicCallOnStartTour">
+		
+		set(layer[controlBar_classicmenu_controlbar_bg_img].width, get(controlBar_classicbutton_pos));
+		set(layer[controlBar_classicmenu_controlbar_bg].width, get(controlBar_classicbutton_pos));
+		controlBar_classicshowMenuControls();
+	</action>
+
+
+
+  <style name="controlBar_classic_btn_style"
+         keep="true"
+         alpha="0.8"
+         edge="right" align="right"
+         width="36" height="36"
+         zorder="3"
+         onover="controlBar_classicctrlbaronoveraction();"
+         onout="controlBar_classicctrlbaronoutaction();"
+         onhover="showTooltip('plugin', controlBar_classicmenuTooltipStyle, bottom);"
+         />
+  <action name="controlBar_classicctrlbaronoveraction">
+    tween(alpha,1,0.1,easeoutquad);
+    tween(y,-2,0.1,easeoutquad);
+  </action>  
+  <action name="controlBar_classicctrlbaronoutaction">
+    tween(alpha,0.8);
+    tween(y,0,0.1,easeoutquad);
+    hideTooltip();
+  </action>
+
+  <layer name="controlBar_classicmenu_controlbar_bg_img"
+         keep="true"
+         align="bottom"
+         x="0" y="10"
+         url="%FIRSTXML%/graphics/classiccontrolbar/footer.png"
+         zorder="1"
+         width="40"
+         height="40"
+         scale9grid="10|10|80|80"
+         visible="false"
+         />
+  <layer name="controlBar_classicmenu_controlbar_bg"
+         keep="true"
+         align="bottom"
+         x="0" y="10"
+         type="container"
+         zorder="2"
+         width="40"
+         height="40"
+         visible="false"
+         alpha="1.0"
+         >
+
+
+    <layer name="controlBar_classicbtn_gyroscope_off"
+            url="%FIRSTXML%/graphics/classiccontrolbar/btn_gyroscope.png"
+            style="controlBar_classic_btn_style"
+            onclick="disableGyroscope();
+"
+            devices="html5"
+            tooltip="controlBar_classicgyroOffTip"
+            visible="false"
+            />
+    <layer name="controlBar_classicbtn_gyroscope_on"
+            url="%FIRSTXML%/graphics/classiccontrolbar/btn_gyroscope.png"
+            style="controlBar_classic_btn_style"
+            onclick="enableGyroscope();
+"
+            devices="html5"
+            tooltip="controlBar_classicgyroOnTip"
+            visible="false"
+            />
+    <layer name="controlBar_classicbtn_gyroscope_not"
+            url="%FIRSTXML%/graphics/classiccontrolbar/btn_gyroscope_off.png"
+            style="controlBar_classic_btn_style"
+            enabled="true"
+            capture="false"
+            devices="html5"
+            tooltip="controlBar_classicgyroNotTip"
+            visible="false"
+            />
+
+
+    <layer name="controlBar_classicbtn_in"
+            url="%FIRSTXML%/graphics/classiccontrolbar/btn_zoom_in.png"
+            ondown="viewControlZoomIn(false);"
+            onup="viewControlZoomStop();
+"
+            style="controlBar_classic_btn_style"
+            tooltip="controlBar_classiczoomInTip"
+            devices="desktop"
+            visible="false"
+            />
+    <layer name="controlBar_classicbtn_out"
+            url="%FIRSTXML%/graphics/classiccontrolbar/btn_zoom_out.png"
+            ondown="viewControlZoomOut(false);
+"
+            onup="viewControlZoomStop();
+"
+            style="controlBar_classic_btn_style"
+            tooltip="controlBar_classiczoomOutTip"
+            devices="desktop"
+            visible="false"
+            />
+
+    <layer name="controlBar_classicbtn_left"
+            url="%FIRSTXML%/graphics/classiccontrolbar/btn_move_left.png"
+            ondown="viewControlMoveLeft(false);
+"
+            onup="viewControlMoveHoriStop();
+"
+            style="controlBar_classic_btn_style"
+            tooltip="controlBar_classicmoveLeftTip"
+            devices="desktop"
+            visible="false"
+            />
+    <layer name="controlBar_classicbtn_right"
+            url="%FIRSTXML%/graphics/classiccontrolbar/btn_move_right.png"
+            ondown="viewControlMoveRight(false);
+"
+            onup="viewControlMoveHoriStop();
+"
+            style="controlBar_classic_btn_style"
+            tooltip="controlBar_classicmoveRightTip"
+            devices="desktop"
+            visible="false"
+            />
+
+    <layer name="controlBar_classicbtn_up"
+            url="%FIRSTXML%/graphics/classiccontrolbar/btn_move_up.png"
+            ondown="viewControlMoveUp(false);
+"
+            onup="viewControlMoveVertStop();
+"
+            style="controlBar_classic_btn_style"
+            tooltip="controlBar_classicmoveUpTip"
+            devices="desktop"
+            visible="false"
+            />
+    <layer name="controlBar_classicbtn_down"
+            url="%FIRSTXML%/graphics/classiccontrolbar/btn_move_down.png"
+            ondown="viewControlMoveDown(false);
+"
+            onup="viewControlMoveVertStop();
+"
+            style="controlBar_classic_btn_style"
+            tooltip="controlBar_classicmoveDownTip"
+            devices="desktop"
+            visible="false"
+            />
+
+
+
+
+    <layer name="controlBar_classicbtn_display_floorplan"
+           url="%FIRSTXML%/graphics/classiccontrolbar/btn_floorplan.png"
+           onclick="showFloorplan();
+"
+           style="controlBar_classic_btn_style"
+           visible="false"
+           tooltip="controlBar_classicdisplayFloorplanTip"
+           />
+    <layer name="controlBar_classicbtn_hide_floorplan"
+           url="%FIRSTXML%/graphics/classiccontrolbar/btn_floorplan.png"
+           onclick="hideFloorplan();
+"
+           style="controlBar_classic_btn_style"
+           visible="false"
+           tooltip="controlBar_classichideFloorplanTip"
+           />
+
+    <layer name="controlBar_classicbtn_share"
+            url="%FIRSTXML%/graphics/classiccontrolbar/btn_share.png"
+            onclick="shareTour();
+"
+            style="controlBar_classic_btn_style"
+            visible="false"
+            tooltip="controlBar_classicshareTip"
+            />
+
+
+    <layer name="controlBar_classicbtn_autorotate_on"
+            url="%FIRSTXML%/graphics/classiccontrolbar/btn_start_autorotation.png"
+            onclick="resumeautorotation();
+"
+            style="controlBar_classic_btn_style"
+            visible="false"
+            tooltip="controlBar_classicautorotateOnTip"
+            />
+    <layer name="controlBar_classicbtn_autorotate_off"
+            url="%FIRSTXML%/graphics/classiccontrolbar/btn_stop_autorotation.png"
+            onclick="pauseautorotation();
+"
+            style="controlBar_classic_btn_style"
+            visible="false"
+            tooltip="controlBar_classicautorotateOffTip"
+            />
+
+
+
+    <layer name="controlBar_classicbtn_display_help"
+            url="%FIRSTXML%/graphics/classiccontrolbar/btn_help.png"
+            onclick="controlBar_classicdisplayHelp();"
+            style="controlBar_classic_btn_style"
+            devices="desktop"
+            visible="false"
+            tooltip="controlBar_classicdisplayHelpTip"
+            />
+    <layer name="controlBar_classicbtn_close_help"
+            url="%FIRSTXML%/graphics/classiccontrolbar/btn_help.png"
+            onclick="controlBar_classiccloseHelp();"
+            style="controlBar_classic_btn_style"
+            visible="false"
+            devices="desktop"
+            tooltip="controlBar_classichideHelpTip"
+            />
+
+
+
+    <layer name="controlBar_classicbtn_hidecontrols"
+            url="%FIRSTXML%/graphics/classiccontrolbar/btn_hide_controls.png"
+            style="controlBar_classic_btn_style"
+            onclick="controlBar_classichideMenuControls();hideTourControls();
+"
+            visible="false"
+            tooltip="controlBar_classichideControlsTip"
+            />
+    <layer name="controlBar_classicbtn_showcontrols"
+            url="%FIRSTXML%/graphics/classiccontrolbar/btn_show_controls.png"
+            style="controlBar_classic_btn_style"
+            onclick="controlBar_classicshowMenuControls();showTourControls();
+"
+            tooltip="controlBar_classicdisplayControlsTip"
+            visible="false"
+            />
+  </layer>
+
+
+
+	<events name="controlBar_classicgyroscopeavailableevent"
+		ongyroscopeavailable="controlBar_classicupdateGyroscopeButtonsAvailability();"
+		ongyroscopeunavailable="controlBar_classicupdateGyroscopeButtonsAvailability();"
+		ongyroscopeon="controlBar_classicenableGyroscopeButtons(true);"
+		ongyroscopeoff="controlBar_classicenableGyroscopeButtons(false);"
+		keep="true" devices="html5" />
+	<krpano controlBar_classicmenugyroscopeavailable="false" controlBar_classicmenugyroscopeenabled="false" />
+	<action name="controlBar_classicupdateGyroscopeButtonsAvailability">
+		if (tour_gyroscopedevices,
+			set(controlBar_classicmenugyroscopeavailable, true);
+			controlBar_classicupdateGyroscopeButtons();
+		,
+			set(controlBar_classicmenugyroscopeavailable, false);
+			controlBar_classicupdateGyroscopeButtons();
+		);
+	</action>
+	<action name="controlBar_classicenableGyroscopeButtons">
+		if (tour_gyroscopedevices,
+			set(controlBar_classicmenugyroscopeenabled, %1);
+			controlBar_classicupdateGyroscopeButtons();
+		);
+	</action>
+	<action name="controlBar_classicHideGyroscopeButtons">
+		set(layer[controlBar_classicbtn_gyroscope_off].visible, false);
+		set(layer[controlBar_classicbtn_gyroscope_on].visible, false);
+		if('%1' == 'true' AND plugin[gyroscope],
+			set(layer[controlBar_classicbtn_gyroscope_not].visible, true);
+		,
+			set(layer[controlBar_classicbtn_gyroscope_not].visible, false);
+		);
+	</action>
+	<action name="controlBar_classicShowGyroscopeButtons">
+		if (controlBar_classicmenugyroscopeavailable,
+			if (controlBar_classicmenugyroscopeenabled,
+				set(layer[controlBar_classicbtn_gyroscope_off].visible, true);
+				set(layer[controlBar_classicbtn_gyroscope_on].visible, false);
+			,
+				set(layer[controlBar_classicbtn_gyroscope_off].visible, false);
+				set(layer[controlBar_classicbtn_gyroscope_on].visible, true);
+			);
+			set(layer[controlBar_classicbtn_gyroscope_not].visible, false);
+		,
+			controlBar_classicHideGyroscopeButtons(true);
+		);
+	</action>
+	<action name="controlBar_classicupdateGyroscopeButtons">
+	if (tour_gyroscopedevices,
+		if (controlBar_classicIsOpened,
+			controlBar_classicShowGyroscopeButtons();
+		,
+			controlBar_classicHideGyroscopeButtons();
+		);
+	,
+		if (controlBar_classicIsOpened,
+			controlBar_classicHideGyroscopeButtons(true);
+		,
+			controlBar_classicHideGyroscopeButtons();
+		);
+	);
+	</action>
+
+
+
+  <action name="controlBar_classichideMenuControls">
+    set(controlBar_classicIsOpened, false);
+    set(layer[controlBar_classicbtn_hidecontrols].visible, false);
+    set(layer[controlBar_classicbtn_showcontrols].visible, true);
+
+    set(layer[controlBar_classicbtn_share].visible, false);
+
+    controlBar_classicupdateAutorotationButtons();
+
+
+    set(layer[controlBar_classicbtn_up].visible  , false);
+    set(layer[controlBar_classicbtn_down].visible, false);
+    set(layer[controlBar_classicbtn_right].visible, false);
+    set(layer[controlBar_classicbtn_left].visible , false);
+    set(layer[controlBar_classicbtn_in].visible , false);
+    set(layer[controlBar_classicbtn_out].visible, false);
+
+    controlBar_classicupdateFloorplanButtons();
+
+
+    controlBar_classicupdateGyroscopeButtons();
+
+    controlBar_classicupdateHelpButtons();
+
+
+    if(controlBar_classicbackgroundwidthwhenclosed == 0,
+      set(layer[controlBar_classicmenu_controlbar_bg_img].visible, false);
+      set(layer[controlBar_classicmenu_controlbar_bg].visible, false);
+    ,
+      set(layer[controlBar_classicmenu_controlbar_bg_img].visible, true);
+      set(layer[controlBar_classicmenu_controlbar_bg].visible, true);
+    );
+    tween(layer[controlBar_classicmenu_controlbar_bg_img].width,get(controlBar_classicbackgroundwidthwhenclosed),0.5,easeOutQuad);
+    tween(layer[controlBar_classicmenu_controlbar_bg].width,get(controlBar_classicbackgroundwidthwhenclosed),0.5,easeOutQuad);
+    tween(layer[controlBar_classicmenu_controlbar_bg_img].alpha,1.0,0.5,easeOutQuad);
+  </action>
+  <action name="controlBar_classicshowMenuControls">
+    set(controlBar_classicIsOpened, true);
+    set(layer[controlBar_classicbtn_hidecontrols].visible, true);
+    set(layer[controlBar_classicbtn_showcontrols].visible, false);
+    if(controlBar_classicbackgroundwidthwhenopened == 0,
+      set(layer[controlBar_classicmenu_controlbar_bg_img].visible, false);
+      set(layer[controlBar_classicmenu_controlbar_bg].visible, false);
+    ,
+      set(layer[controlBar_classicmenu_controlbar_bg_img].visible, true);
+      set(layer[controlBar_classicmenu_controlbar_bg].visible, true);
+    );
+    tween(layer[controlBar_classicmenu_controlbar_bg_img].alpha,1.0,0.5,easeOutQuad);
+    controlBar_classicshowMenuButtons();
+
+
+      tween(layer[controlBar_classicmenu_controlbar_bg_img].width, get(controlBar_classicbackgroundwidthwhenopened),0.5,easeOutQuad);
+      tween(layer[controlBar_classicmenu_controlbar_bg].width, get(controlBar_classicbackgroundwidthwhenopened),0.5,easeOutQuad);
+
+
+  </action>
+  <action name="controlBar_classicshowMenuButtons">
+    if (device.desktop,
+    set(layer[controlBar_classicbtn_up].visible  , true);
+    set(layer[controlBar_classicbtn_down].visible, true);
+    );
+    if (device.desktop,
+    set(layer[controlBar_classicbtn_right].visible, true);
+    set(layer[controlBar_classicbtn_left].visible , true);
+    );
+    if (device.desktop,
+    set(layer[controlBar_classicbtn_in].visible , true);
+    set(layer[controlBar_classicbtn_out].visible, true);
+    );
+
+    controlBar_classicupdateFloorplanButtons();
+
+
+    controlBar_classicupdateGyroscopeButtons();
+
+    controlBar_classicupdateHelpButtons();
+
+
+
+    set(layer[controlBar_classicbtn_share].visible, true);
+
+    controlBar_classicupdateAutorotationButtons();
+
+
+  </action>
+
+  <layer name="controlBar_classichelpScreen" align="center" keep="true" onclick="controlBar_classiccloseHelp();" url="%FIRSTXML%/graphics/classiccontrolbar/help_screen_bg.png" visible="false" zorder="97" height="10%" width="prop" />
+
+  <layer name="controlBar_classichelpScreenFg" align="center" keep="true" onclick="controlBar_classiccloseHelp();" displayed="false" 
+         url="%FIRSTXML%/graphics/classiccontrolbar/help_screen_fg.png" 
+         alpha="0.8" 
+         height="50%" 
+         width="prop" 
+         zorder="98"
+         visible="false" />
+  <action name="controlBar_classicdisplayHelp">
+    set(layer[controlBar_classichelpScreenFg].displayed,true);
+    set(layer[controlBar_classichelpScreen].visible,true);
+    tween(layer[controlBar_classichelpScreen].height, 50%, 1, easeOutQuad,
+      set(layer[controlBar_classichelpScreenFg].visible,true);
+    );
+    controlBar_classicupdateHelpButtons();
+  </action>
+  <action name="controlBar_classiccloseHelp">
+    set(layer[controlBar_classichelpScreenFg].displayed,false);
+    set(layer[controlBar_classichelpScreenFg].visible,false);
+    tween(layer[controlBar_classichelpScreen].height, 10%, 1, easeOutQuad,
+      set(layer[controlBar_classichelpScreen].visible,false);
+    );
+    controlBar_classicupdateHelpButtons();
+  </action>
+	<action name="controlBar_classicHideHelpButtons">
+		set(layer[controlBar_classicbtn_display_help].visible, false);
+		set(layer[controlBar_classicbtn_close_help].visible, false);
+	</action>
+	<action name="controlBar_classicShowHelpButtons">
+		if (layer[controlBar_classichelpScreenFg].displayed,
+			set(layer[controlBar_classicbtn_close_help].visible, true);
+			set(layer[controlBar_classicbtn_display_help].visible, false);
+		,
+			set(layer[controlBar_classicbtn_display_help].visible, true);
+			set(layer[controlBar_classicbtn_close_help].visible, false);
+		);
+	</action>
+	<action name="controlBar_classicupdateHelpButtons">
+	if (device.desktop,
+		if (controlBar_classicIsOpened,
+			controlBar_classicShowHelpButtons();
+		,
+			controlBar_classicHideHelpButtons();
+		);
+	,
+		controlBar_classicHideHelpButtons();
+	);
+	</action>
+
+
+	<events name="controlBar_classicDisplayFloorPlanEvents" 
+		onshowtourfloorplan="controlBar_classicupdateFloorplanButtons();" 
+		onhidetourfloorplan="controlBar_classicupdateFloorplanButtons();" 
+		keep="true" />
+	<action name="controlBar_classicHideFloorplanButtons">
+		set(layer[controlBar_classicbtn_display_floorplan].visible, false);
+		set(layer[controlBar_classicbtn_hide_floorplan].visible, false);
+	</action>
+	<action name="controlBar_classicShowFloorplanButtons">
+		if (tour_displayfloorplan,
+			set(layer[controlBar_classicbtn_hide_floorplan].visible, true);
+			set(layer[controlBar_classicbtn_display_floorplan].visible, false);
+		,
+			set(layer[controlBar_classicbtn_display_floorplan].visible, true);
+			set(layer[controlBar_classicbtn_hide_floorplan].visible, false);
+		);
+	</action>
+	<action name="controlBar_classicupdateFloorplanButtons">
+		if (controlBar_classicIsOpened,
+			controlBar_classicShowFloorplanButtons();
+		,
+			controlBar_classicHideFloorplanButtons();
+		);
+	</action>
+
+
+	<events name="controlBar_classicAutorotationEvents"
+		onstartautorotation="controlBar_classicupdateAutorotationButtons();"
+		onresumeautorotation="controlBar_classicupdateAutorotationButtons();"
+		onstopautorotation="controlBar_classicupdateAutorotationButtons();"
+		onpauseautorotation="controlBar_classicupdateAutorotationButtons();"
+		keep="true"/>
+	<action name="controlBar_classicHideAutorotationButtons">
+		set(layer[controlBar_classicbtn_autorotate_off].visible, false);
+		set(layer[controlBar_classicbtn_autorotate_on].visible , false);
+	</action>
+	<action name="controlBar_classicShowAutorotationButtons">
+		if(autorotate.enabled == false,
+			set(layer[controlBar_classicbtn_autorotate_off].visible, false);
+			set(layer[controlBar_classicbtn_autorotate_on].visible , true);
+		,
+			set(layer[controlBar_classicbtn_autorotate_off].visible, true);
+			set(layer[controlBar_classicbtn_autorotate_on].visible , false);
+		);
+	</action>
+	<action name="controlBar_classicupdateAutorotationButtons">
+		if (controlBar_classicIsOpened,
+			controlBar_classicShowAutorotationButtons();
+		,
+			controlBar_classicHideAutorotationButtons();
+		);
+	</action>
+
+
+
+
+<layer name="controlBar_classicmenuTooltipStyle"
+	keep="true"
+	enabled="false"
+	capture="false"
+	url="%FIRSTXML%/graphics/textfield.swf"
+	align="center"
+	background="false"
+	border="false"
+	css="color:#e6e6e6;font-family:Helvetica;font-weight:bold;font-size:14px;text-align:left;"
+	height="20"
+	autoheight="true"
+	autowidth="auto"
+	selectable="false"
+	zorder="0"
+	visible="false"
+	html=""
+	padding="2"
+	xoffset="0"
+	yoffset="0"
+	edge="bottom"
+	/>
+
+
+<!-- ********** -->
+<!-- Logo -->
+<!-- id : logo -->
+<!-- ********** -->
+  <!-- EMPTY PICTURE : no image file -->
+<!-- ********** -->
+<!-- Menu de contexto -->
+<!-- id : contextmenu -->
+<!-- ********** -->
+  <contextmenu fullscreen="false" versioninfo="false" touch="true">
+    <item name="website1" onclick="getmessage(urltoopen,contextmenuwebsiteurl1);openurl(get(urltoopen),_blank);" />
+    <item name="fullscreenentry" onclick="enterFullscreen();
+" separator="true"/>
+  </contextmenu>
+
+  <events name="contextmenuevents" keep="true" 
+    onenterfullscreen="updateContextMenu" onexitfullscreen="updateContextMenu" 
+    onxmlcomplete="updateContextMenu" 
+    changetourlanguage="updateContextMenu" 
+    />
+  <events name="contextmenuvrevents" keep="true" 
+    onvravailable="updateContextMenu();" onvrunavailable="updateContextMenu();"
+    devices="html5"
+    />
+  <action name="updateContextMenu">
+    getmessage(contextmenu.item[website1].caption, contextmenuopenwebsitelabel1);
+    if (device.fullscreensupport,
+      if(tour_fullscreen,
+        getmessage(contextmenu.item[fullscreenentry].caption, contextmenucloseFsLabel);
+        set(contextmenu.item[fullscreenentry].onclick, exitFullscreen();
+);
+       ,
+        getmessage(contextmenu.item[fullscreenentry].caption, contextmenuopenFsLabel);
+        set(contextmenu.item[fullscreenentry].onclick, enterFullscreen();
+);
+      );
+     ,
+      set(contextmenu.item[fullscreenentry].visible, false);
+    );
+  </action>
+
+<!-- ********** -->
+<!-- Partilha Social -->
+<!-- id : socialShare -->
+<!-- ********** -->
+
+<ptplugin name="socialShare" engine="kolorBox">
+	<settings>
+		<option name="position" value="center" type="string" />
+		<option name="margin_x" value="50" type="int" />
+		<option name="margin_y" value="50" type="int" />
+		<option name="external_padding" value="15" type="int" />
+		<option name="animate" value="false" type="bool" />
+		<option name="draggable_box" value="false" type="bool" />
+		<option name="container_auto_size" value="true" type="bool" />
+		<option name="container_color" value="c7c7c7" type="string" />
+		<option name="container_alpha" value="0.7000076295109483" type="float" />
+		<option name="container_topleft_border_radius" value="5" type="int" />
+		<option name="container_topright_border_radius" value="5" type="int" />
+		<option name="container_bottomleft_border_radius" value="5" type="int" />
+		<option name="container_bottomright_border_radius" value="5" type="int" />
+		<option name="container_border_width" value="0" type="int" />
+		<option name="container_border_color" value="000000" type="string" />
+		<option name="container_border_alpha" value="1" type="float" />
+		<option name="overlay_displayed" value="false" type="bool" />
+		<option name="overlay_color" value="000000" type="string" />
+		<option name="overlay_alpha" value="0.50000762951094835" type="float" />
+
+		<option name="social_btn" value="facebook#twitter#google#email" type="string" />
+		<option name="social_orientation" value="horizontal" type="string" />
+		<option name="social_btn_size" value="64" type="int" />
+		<option name="inner_margin" value="10" type="int" />
+		
+		
+		<option name="title_displayed" value="false" type="bool" />
+		<option name="caption_displayed" value="false" type="bool" />
+		<option name="close_displayed" value="true" type="bool" />
+		<option name="close_position" value="topright" type="string" />
+		<option name="close_text" value="socialShareclose_text" type="string" />
+
+		<option name="close_callback" value="invokeKrFunction('closeKolorBoxCallback_socialShare')" type="string" />
+		<option name="zorder" value="6" type="int" />
+		<option name="use_i18n" value="true" type="bool" />
+	</settings>
+	<internaldata>
+		
+	</internaldata>
+</ptplugin>
+
+<action name="kolorBoxJsReady_socialShare">
+	set(ptplugin[socialShare].jsready, true);
+
+</action>
+
+
+
+<action name="showSocialShare_socialShare">
+	ifnot(ptplugin[socialShare].isOpen,
+		set(ptplugin[socialShare].isOpen, true);
+		pauseautorotation(forceplugin);
+
+			js(invokePluginFunction(socialShare, loadSingleArrayItem, social));
+		events.dispatch(onremovedisplayedobject);
+	);
+</action>
+
+<action name="toggleSocialShare_socialShare">
+	js(invokePluginFunction(socialShare, toggleKolorBox, %1));
+</action>
+
+
+<action name="closeKolorBox_socialShare">
+	js(invokePluginFunction(socialShare, closeKolorBox));
+</action>
+
+<action name="closeKolorBoxCallback_socialShare">
+	resumeautorotation(forceplugin);
+
+	
+	set(ptplugin[socialShare].isOpen, false);
+</action>
+
+<action name="changeLanguage_socialShare">
+	if(ptplugin[socialShare].jsready,
+		js(invokePluginFunction(socialShare, changeLanguage));
+	);
+</action>
+
+<events name="kolorBoxEvents_socialShare" 
+	keep="true"
+	onsharetour="showSocialShare_socialShare();" 
+	
+	
+	changetourlanguage="changeLanguage_socialShare();"
+	/>
+
+<!-- ********* -->
+<!-- Gyroscope -->
+<!-- ********* -->
+
+
+
+<plugin name="gyroscope"
+        url="%FIRSTXML%/graphics/gyro2.js"
+        keep="true"
+        devices="no-desktop.and.html5"
+
+        onunavailable="checkGyroUnavailable();"
+        sensor_mode="1"
+        friction="auto"
+        autocalibration="true"
+        touch_mode="full"
+        onavailable="delayedcall(1, checkGyroAvailability(););"
+        enabled="false"
+        activated="false"
+        />
+
+<events name="gyroscopeEvents" onnewpano="planarGyroscopeTest();" keep="true" />
+
+<action name="planarGyroscopeTest">
+  if(plugin[gyroscope],
+          if(scene[get(xml.scene)].full360,
+            set(sceneisfull360, false);
+            sub(viewhfov, panoview.hmax, panoview.hmin);
+            if (viewhfov == 360,
+              sub(viewvfov, panoview.vmax, panoview.vmin);
+              if (viewvfov == 180,
+                set(sceneisfull360, true);
+              );
+            );
+            if (sceneisfull360,
+              set(plugin[gyroscope].camroll, true);
+            ,
+              set(plugin[gyroscope].camroll, false);
+            );
+          ,
+            set(plugin[gyroscope].camroll, false);
+          );
+  );
+</action>
+
+<action name="changeGyroscopeState">
+  if(plugin[gyroscope],
+    if (plugin[gyroscope].isavailable,
+        if(%1,
+          set(plugin[gyroscope].activated,true);
+        ,
+          set(plugin[gyroscope].activated,false);
+        );
+        if (%1 != plugin[gyroscope].enabled,
+          if(plugin[gyroscope].activated,
+            switch(plugin[gyroscope].enabled);
+          ,
+            set(plugin[gyroscope].enabled, false);
+          );
+          if (plugin[gyroscope].enabled, events.dispatch(ongyroscopeon);, events.dispatch(ongyroscopeoff););
+        );
+    );
+  );
+</action>
+
+<action name="checkGyroAvailability">
+  if(plugin[gyroscope],
+    if (plugin[gyroscope].isavailable,
+      ifnot(tour_firstlittleplanet,
+        
+        switch(plugin[gyroscope].enabled);
+        set(plugin[gyroscope].activated,true);
+        
+        set(tour_gyroscopedevices, true);
+        events.dispatch(ongyroscopeavailable);
+      ,
+        delayedcall(1, checkGyroAvailability(););
+      );
+    ,
+      set(tour_gyroscopedevices, false);
+    );
+    if (plugin[gyroscope].enabled, events.dispatch(ongyroscopeon);, events.dispatch(ongyroscopeoff););
+  ,
+    checkGyroUnavailable();
+  );
+</action>
+
+<action name="checkGyroUnavailable">
+  set(plugin[gyroscope].activated, false);
+  set(plugin[gyroscope].enabled, false);
+  set(tour_gyroscopedevices, false);
+  events.dispatch(ongyroscopeunavailable);
+</action>
+
+<!-- ********** -->
+<!-- Informação de Carregamento -->
+<!-- id : loaderinfo -->
+<!-- ********** -->
+
+  <events name="loaderinfoevent" onxmlcomplete="loaderinfoupdate();" keep="true"/>
+
+  <action name="loaderinfoupdate">
+    if(scene[get(xml.scene)].video,
+      set(layer[loaderinfotextfield].visible, false);
+    ,
+      if (progress.progress == 1,
+        delayedcall(0.5, set(layer[loaderinfotextfield].visible, false); );
+      ,
+        set(layer[loaderinfotextfield].visible, true);
+      );
+      mul(progresstext, get(progress.progress),100);
+      roundval(progresstext);
+      txtadd(progresstext, get(progresstext), %);
+      set(layer[loaderinfotextfield].html, get(progresstext));
+      ifnot(progress.progress GE 1, delayedcall(0.01, loaderinfoupdate() ));
+    );
+  </action>
+
+  <layer name="loaderinfotextfield"
+         keep="true"
+         zorder="8"
+         url="%FIRSTXML%/graphics/textfield.swf"
+         align="center"
+         x="0"
+         y="0"
+         borderwidth="0"
+         background="false"
+         autoheight="true"
+         autowidth="auto"
+         capture="false"
+         handcursor="false"
+         selectable="false"
+         alpha="1"
+         visible="true"
+         css="
+         text-align:center;
+         color:#ffffff;
+         font-family:Helvetica;
+         font-size:16px;
+         "
+  />
+
+<!-- ********** -->
+<!-- Galeria -->
+<!-- id : gallery -->
+<!-- ********** -->
+
+<ptplugin name="gallery" engine="kolorBox">
+	<settings>
+		<option name="position" value="center" type="string" />
+		<option name="margin_x" value="0" type="int" />
+		<option name="margin_y" value="0" type="int" />
+		<option name="external_padding" value="15" type="int" />
+		<option name="draggable_box" value="false" type="bool" />
+		<option name="slideshow_autoplay" value="false" type="bool" />
+		<option name="slideshow" value="15000" type="int" />
+		<option name="container_auto_size" value="true" type="bool" />
+		<option name="container_width" value="100" type="int" />
+		<option name="container_width_unit" value="percent" type="string" />
+		<option name="container_height" value="100" type="int" />
+		<option name="container_height_unit" value="percent" type="string" />
+		<option name="container_color" value="ffffff" type="string" />
+		<option name="container_alpha" value="0.80000000000000004" type="float" />
+		<option name="container_topleft_border_radius" value="15" type="int" />
+		<option name="container_topright_border_radius" value="15" type="int" />
+		<option name="container_bottomleft_border_radius" value="15" type="int" />
+		<option name="container_bottomright_border_radius" value="15" type="int" />
+		<option name="container_border_width" value="0" type="int" />
+		<option name="container_border_color" value="ffffff" type="string" />
+		<option name="container_border_alpha" value="1" type="float" />
+		<option name="overlay_displayed" value="true" type="bool" />
+		<option name="overlay_color" value="000000" type="string" />
+		<option name="overlay_alpha" value="0.50000762951094835" type="float" />
+
+		<option name="item_border_width" value="0" type="int" />
+		<option name="item_border_color" value="ffffff" type="string" />
+		<option name="item_border_alpha" value="1" type="float" />
+		
+		<option name="title_displayed" value="true" type="bool" />
+		<option name="title_position" value="top" type="string" />
+		<option name="title_font" value="Verdana" type="string" />
+		<option name="title_size" value="14" type="int" />
+		<option name="title_weight" value="bold" type="string" />
+		<option name="title_style" value="normal" type="string" />
+		<option name="title_decoration" value="none" type="string" />
+		<option name="title_color" value="666666" type="string" />
+		
+		<option name="caption_displayed" value="false" type="bool" />
+		
+		<option name="play_displayed" value="true" type="bool" />
+		<option name="play_position" value="bottomleft" type="string" />
+		<option name="play_text" value="galleryplay_text" type="string" />
+
+
+
+
+		<option name="navigation_displayed" value="true" type="bool" />
+		<option name="navigation_position" value="bottom" type="string" />
+		<option name="counter_color" value="666666" type="string" />
+		<option name="navprev_text" value="gallerynavprev_text" type="string" />
+		<option name="navnext_text" value="gallerynavnext_text" type="string" />
+
+
+
+
+		<option name="navigation_arrows" value="true" type="bool" />
+
+
+
+
+		<option name="fullscreen_displayed" value="true" type="bool" />
+		<option name="fullscreen_position" value="topleft" type="string" />
+		<option name="fullscreen_text" value="galleryfullscreen_text" type="string" />
+
+
+
+
+		<option name="close_displayed" value="true" type="bool" />
+		<option name="close_position" value="topright" type="string" />
+		<option name="close_text" value="galleryclose_text" type="string" />
+
+		<option name="close_callback" value="invokeKrFunction('closeKolorBoxCallback_gallery')" type="string" />
+		<option name="zorder" value="9" type="int" />
+		<option name="use_i18n" value="true" type="bool" />
+	</settings>
+	<internaldata>
+		<item name="item_1" title="gallerypicture_title0" caption="gallerypicture_caption0" value="edbarcelonadata/graphics/gallery/"/>
+		<item name="item_2" title="gallerypicture_title1" caption="gallerypicture_caption1" value="edbarcelonadata/graphics/gallery/"/>
+		<item name="item_3" title="gallerypicture_title2" caption="gallerypicture_caption2" value="edbarcelonadata/graphics/gallery/"/>
+		<item name="item_4" title="gallerypicture_title3" caption="gallerypicture_caption3" value="edbarcelonadata/graphics/gallery/"/>
+		<item name="item_5" title="gallerypicture_title4" caption="gallerypicture_caption4" value="edbarcelonadata/graphics/gallery/"/>
+		<item name="item_6" title="gallerypicture_title5" caption="gallerypicture_caption5" value="edbarcelonadata/graphics/gallery/"/>
+		<item name="item_7" title="gallerypicture_title6" caption="gallerypicture_caption6" value="edbarcelonadata/graphics/gallery/"/>
+	</internaldata>
+</ptplugin>
+
+<action name="kolorBoxJsReady_gallery">
+	set(ptplugin[gallery].jsready, true);
+</action>
+
+<action name="showGallery_gallery">
+	ifnot(ptplugin[gallery].isOpen,
+		set(ptplugin[gallery].isOpen, true);
+		set(ptplugin[gallery].doNotDeleteMe, false);
+		set(gallery_boxurl, %1);
+		pauseautorotation(forceplugin);
+
+		js(invokePluginFunction(gallery, openKolorBox, %1));
+		events.dispatch(onremovedisplayedobject);
+	,
+		if(%1 !== null AND %1 != gallery_boxurl,
+			closeKolorBox_gallery();
+			delayedcall(0.3,showGallery_gallery(%1););
+		);
+	);
+</action>
+
+<action name="toggleGallery_gallery">
+	js(invokePluginFunction(gallery, toggleKolorBox, %1));
+</action>
+
+
+<action name="closeKolorBox_gallery">
+	js(invokePluginFunction(gallery, closeKolorBox));
+</action>
+
+<action name="closeKolorBoxCallback_gallery">
+	resumeautorotation(forceplugin);
+
+	set(ptplugin[gallery].isOpen, false);
+</action>
+
+<action name="changeLanguage_gallery">
+	if(ptplugin[gallery].jsready,
+		js(invokePluginFunction(gallery, changeLanguage));
+	,
+		delayedcall(delay_gallery, 0.1, changeLanguage_gallery(););
+	);
+</action>
+
+<events name="kolorBoxEvents_gallery" 
+	keep="true"
+	changetourlanguage="changeLanguage_gallery();"
+	/>
+
+<!-- ********** -->
+<!-- Planta -->
+<!-- id : floorPlan -->
+<!-- ********** -->
+
+	<ptplugin name="floorPlan" engine="KolorFloorPlan">
+		<settings>
+			<option name="background_color" value="f2f2f2" type="string" />
+			<option name="background_lighter_color" value="ffffff" type="string" />
+			<option name="background_darker_color" value="cacaca" type="string" />
+			<option name="background_alpha" value="0" type="float" />
+			<option name="text_color" value="000000" type="string" />
+			<option name="resize" value="true" type="bool" />
+			<option name="fp_selector" value="multiple" type="string" />
+			<option name="fp_selector_label" value="floorPlanmenu_label" type="string" />
+			<option name="display_title" value="true" type="bool" />
+			<option name="title" value="project_floor_title" type="string" />
+			<option name="title_font" value="Verdana" type="string" />
+			<option name="title_size" value="14" type="int" />
+			<option name="title_weight" value="normal" type="string" />
+			<option name="title_decoration" value="normal" type="string" />
+			<option name="title_color" value="000000" type="string" />
+			<option name="display_orientation" value="false" type="bool" />
+			<option name="display_radar" value="true" type="bool" />
+			<option name="radar_radius" value="50" type="int" />
+			<option name="radar_line_width" value="1" type="int" />
+			<option name="radar_line_color" value="000000" type="string" />
+			<option name="radar_line_alpha" value="1" type="float" />
+			<option name="radar_fill_color" value="ffdc12" type="string" />
+			<option name="radar_fill_alpha" value="1" type="float" />
+			<option name="selected_effect" value="pulsate" type="string" />
+			<option name="close_on_click" value="true" type="bool" />
+			<option name="position" value="topleft" type="string" />
+			<option name="zorder" value="10" type="int" />
+			<option name="use_i18n" value="true" type="bool" />
+		</settings>
+		
+		<floorplanItems selectedItem="fpitemmain" selectedSpot="" selectedSpotScene="" selectedSpotHeading="" selectedSpotFov="">
+				
+				<floorplanItem 
+					name="fpitemmain" 
+					width="994" 
+					height="559" 
+					groupName="" 
+					url="floorplan/planta_barcelona.png" 
+					title="project_floor_title"
+					heading="0">
+							<spot name="spotmap2055" posX="0.720905006" posY="0.331418008" heading="90.000000000000057" desc="spotmap2055_tooltip" descType="tooltip" groupName="" isScene="true" planar="false" scene="pano2037" jsClick="spotmap2055ActionSpotFloorPlan">
+								<icon url="spots/pin_curved_2d_shadowed_user_defaultmap01.png" iconWidth="32" iconHeight="32" iconAnchor="center" />
+							</spot>
+							<spot name="spotmap2056" posX="0.553879023" posY="0.662835002" heading="-99.799999999999997" desc="spotmap2056_tooltip" descType="tooltip" groupName="" isScene="true" planar="false" scene="pano2035" jsClick="spotmap2056ActionSpotFloorPlan">
+								<icon url="spots/pin_curved_2d_shadowed_user_defaultmap01.png" iconWidth="32" iconHeight="32" iconAnchor="center" />
+							</spot>
+							<spot name="spotmap2057" posX="0.521552026" posY="0.337164998" heading="32.799999999999898" desc="spotmap2057_tooltip" descType="tooltip" groupName="" isScene="true" planar="false" scene="pano2034" jsClick="spotmap2057ActionSpotFloorPlan">
+								<icon url="spots/pin_curved_2d_shadowed_user_defaultmap01.png" iconWidth="32" iconHeight="32" iconAnchor="center" />
+							</spot>
+							<spot name="spotmap2058" posX="0.314655006" posY="0.553640008" heading="51.599999999999973" desc="spotmap2058_tooltip" descType="tooltip" groupName="" isScene="true" planar="false" scene="pano2033" jsClick="spotmap2058ActionSpotFloorPlan">
+								<icon url="spots/pin_curved_2d_shadowed_user_defaultmap01.png" iconWidth="32" iconHeight="32" iconAnchor="center" />
+							</spot>
+							<spot name="spotmap2059" posX="0.137931004" posY="0.369731992" heading="-137.19999999999999" desc="spotmap2059_tooltip" descType="tooltip" groupName="" isScene="true" planar="false" scene="pano2032" jsClick="spotmap2059ActionSpotFloorPlan">
+								<icon url="spots/pin_curved_2d_shadowed_user_defaultmap01.png" iconWidth="32" iconHeight="32" iconAnchor="center" />
+							</spot>
+							<spot name="spotmap2060" posX="0.259698004" posY="0.187739" heading="121.40000000000001" desc="spotmap2060_tooltip" descType="tooltip" groupName="" isScene="true" planar="false" scene="pano2036" jsClick="spotmap2060ActionSpotFloorPlan">
+								<icon url="spots/pin_curved_2d_shadowed_user_defaultmap01.png" iconWidth="32" iconHeight="32" iconAnchor="center" />
+							</spot>
+				</floorplanItem>
+			
+			
+		</floorplanItems>
+	</ptplugin>
+	
+	<action name="kolorFloorplanJsReady_floorPlan">
+		set(ptplugin[floorPlan].jsready, true);
+		
+		ifnot(ptplugin[floorPlan].floorplanItems[0].selectedSpot == "",
+			set(ptplugin[floorPlan].floorplanItems[0].selectedSpotFov, get(view.hfov));
+			js(invokePluginFunction(floorPlan, setKolorFloorPlanSelectedSpotOptions, get(xml.scene), get(view.hlookat), get(view.hfov)));
+		);
+	</action>
+	
+	
+		<!-- floorplan main spots counter : 6 -->
+			<action name="spotmap2055ActionSpotFloorPlan">
+          mainloadscene(pano2037);lookat(get(panoview.h), get(panoview.v), get(panoview.fov));
+
+</action>
+			<action name="spotmap2056ActionSpotFloorPlan">
+          mainloadscene(pano2035);lookat(get(panoview.h), get(panoview.v), get(panoview.fov));
+
+</action>
+			<action name="spotmap2057ActionSpotFloorPlan">
+          mainloadscene(pano2034);lookat(get(panoview.h), get(panoview.v), get(panoview.fov));
+
+</action>
+			<action name="spotmap2058ActionSpotFloorPlan">
+          mainloadscene(pano2033);lookat(get(panoview.h), get(panoview.v), get(panoview.fov));
+
+</action>
+			<action name="spotmap2059ActionSpotFloorPlan">
+          mainloadscene(pano2032);lookat(get(panoview.h), get(panoview.v), get(panoview.fov));
+
+</action>
+			<action name="spotmap2060ActionSpotFloorPlan">
+          mainloadscene(pano2036);lookat(get(panoview.h), get(panoview.v), get(panoview.fov));
+
+</action>
+	
+	
+	
+	<events name="floorPlanEvents" 
+	onxmlcomplete="ifnot(floorPlanFloorPlanLoaded,set(tour_displayfloorplan,true););floorPlanActivateDefaultSpot();" 
+	onviewchanged="floorPlanOnViewChange();" 
+	onhidetourfloorplan="floorPlanCloseTourFloorPlan();" 
+	onshowtourfloorplan="if(tour_displayfloorplan,floorPlanOpenTourFloorPlan(););" 
+	onTourStart="set(loadedState_floorPlanArea, get(tour_displaycontrols));floorPlanOpenTourFloorPlan();"
+	changetourlanguage="floorPlanChangeLanguage();"
+	keep="true" />
+	
+	<action name="floorPlanChangeLanguage">
+		if(ptplugin[floorPlan].jsready,
+			stopdelayedcall(delay_floorPlan);
+			js(invokePluginFunction(floorPlan, changeLanguage));
+			js(invokePluginFunction(floorPlanArea, changeLanguage, false));
+		,
+			delayedcall(delay_floorPlan, 0.1, floorPlanChangeLanguage(););
+		);
+	</action>
+	
+	
+	<krpano floorPlanFloorPlanLoaded="false" />
+	
+	<action name="floorPlanHideTourFloorPlan">
+		hideKolorArea_floorPlanArea(true);
+	</action>
+	
+	<action name="floorPlanCloseTourFloorPlan">
+		closeKolorArea_floorPlanArea();
+	</action>
+	
+	<action name="floorPlanShowTourFloorPlan">
+		if(ptplugin[floorPlanArea].isOpen === null,
+			openKolorArea_floorPlanArea();
+		,
+			showKolorArea_floorPlanArea(true);
+		);
+	</action>
+	
+	<action name="floorPlanOpenTourFloorPlan">
+		openKolorArea_floorPlanArea();
+	</action>
+	
+	<action name="floorPlanOnViewChange">
+		if (floorPlanFloorPlanLoaded == true,
+			ifnot(ptplugin[floorPlan].floorplanItems[0].selectedSpot == "",
+				ifnot(scene[get(xml.scene)].planar,
+					js(invokePluginFunction(floorPlan, changeDirection, get(xml.scene), get(view.hlookat), get(view.hfov)));
+				);
+			);
+		);
+	</action>
+	
+	<action name="floorPlanActivateSpot">
+		
+		set(ptplugin[floorPlan].floorplanItems[0].selectedSpot, %1);
+		set(ptplugin[floorPlan].floorplanItems[0].selectedItem, %2);
+		
+		if(%1 !== "",
+			set(ptplugin[floorPlan].floorplanItems[0].selectedSpotScene, get(xml.scene));
+			set(ptplugin[floorPlan].floorplanItems[0].selectedSpotHeading, get(view.hlookat));
+			set(ptplugin[floorPlan].floorplanItems[0].selectedSpotFov, get(view.hfov));
+		);
+		
+		js(invokePluginFunction(floorPlan, selectSpot, %1, %2, %3));
+
+		if(%1 !== "",
+			if(scene[get(xml.scene)].planar,
+				js(invokePluginFunction(floorPlan, hideRadar));
+			,
+				js(invokePluginFunction(floorPlan, changeDirection, get(xml.scene), get(view.hlookat), get(view.hfov)));
+			);
+		);
+	</action>
+	
+	<action name="floorPlanDeactivateSpot">
+		set(ptplugin[floorPlan].floorplanItems[0].selectedSpot, "");
+		
+		js(invokePluginFunction(floorPlan, unselectSpot));
+	</action>
+	
+	<action name="floorPlanActivateDefaultSpot">
+		set(floorPlanFloorPlanLoaded, true);
+		
+		set(floorPlanSpotFound, "");
+		set(floorPlanSpotScene, "");
+		set(floorPlanItemFound, "");
+		set(floorPlanItemSearch, true);
+		set(floorPlanSpotSearchActivated, true);
+		set(floorPlanSpotSearchContinue, true);
+		
+		
+		set(defaultfloorplaniteminc_wait,50);
+		for(set(defaultfloorplaniteminc,0), defaultfloorplaniteminc LT ptplugin[floorPlan].floorplanItems[0].floorplanItem.count , inc(defaultfloorplaniteminc),
+			if(defaultfloorplaniteminc_wait == defaultfloorplaniteminc,
+				add(defaultfloorplaniteminc_wait,50);
+				wait(0);
+			);
+			if(floorPlanSpotSearchActivated == true,
+				
+				if(ptplugin[floorPlan].floorplanItems[0].floorplanItem[get(defaultfloorplaniteminc)].groupName == scene[get(xml.scene)].group,
+					set(floorPlanItemFound, get(ptplugin[floorPlan].floorplanItems[0].floorplanItem[get(defaultfloorplaniteminc)].name));
+					set(ptplugin[floorPlan].floorplanItems[0].selectedItem, get(ptplugin[floorPlan].floorplanItems[0].floorplanItem[get(defaultfloorplaniteminc)].name));
+					set(floorPlanItemSearch, false);
+				,
+					
+					if(floorPlanItemFound == "",
+						set(floorPlanItemFound, get(ptplugin[floorPlan].floorplanItems[0].floorplanItem[fpitemmain].name));
+						set(ptplugin[floorPlan].floorplanItems[0].selectedItem, get(ptplugin[floorPlan].floorplanItems[0].floorplanItem[fpitemmain].name));
+					);
+				);
+			);
+			if(floorPlanSpotSearchActivated == true,
+				set(defaultspotinc_wait,50);
+				for(set(defaultspotinc,0), defaultspotinc LT ptplugin[floorPlan].floorplanItems[0].floorplanItem[get(defaultfloorplaniteminc)].spot.count , inc(defaultspotinc),
+					if(defaultspotinc_wait == defaultspotinc,
+						add(defaultspotinc_wait,50);
+						wait(0);
+					);
+					if(ptplugin[floorPlan].floorplanItems[0].floorplanItem[get(defaultfloorplaniteminc)].spot[get(defaultspotinc)].isScene == true,
+					
+						if(floorPlanSpotSearchContinue == true,
+							if(ptplugin[floorPlan].floorplanItems[0].floorplanItem[get(defaultfloorplaniteminc)].spot[get(defaultspotinc)].scene == xml.scene,
+								set(floorPlanSpotFound, get(ptplugin[floorPlan].floorplanItems[0].floorplanItem[get(defaultfloorplaniteminc)].spot[get(defaultspotinc)].name));
+								set(floorPlanSpotScene, get(ptplugin[floorPlan].floorplanItems[0].floorplanItem[get(defaultfloorplaniteminc)].spot[get(defaultspotinc)].scene));
+								set(ptplugin[floorPlan].floorplanItems[0].selectedItem, get(ptplugin[floorPlan].floorplanItems[0].floorplanItem[get(defaultfloorplaniteminc)].name));
+								if(floorPlanItemSearch == false,
+									set(floorPlanSpotSearchContinue, false);
+									set(floorPlanSpotSearchActivated, false);
+								);
+							);
+						);
+					);
+					
+				);
+			);
+		);
+		
+		if(floorPlanSpotFound == "",
+			
+			
+			floorPlanDeactivateSpot();
+			
+			
+			set(ptplugin[floorPlan].floorplanItems[0].selectedItem, get(floorPlanItemFound));
+			
+			
+			ifnot(ptplugin[floorPlan].floorplanItems[0].selectedItem == "",
+				floorPlanActivateSpot("", get(ptplugin[floorPlan].floorplanItems[0].selectedItem), "");
+			);
+		,
+			
+			floorPlanActivateSpot(get(floorPlanSpotFound), get(ptplugin[floorPlan].floorplanItems[0].selectedItem), get(floorPlanSpotScene));
+		);
+	</action>
+	
+	<action name="floorPlanChangeTitle">
+		js(invokePluginFunction(floorPlan, changeTitle, %1));
+	</action>
+	
+	<ptplugin name="floorPlanArea" engine="kolorArea">
+	<settings>
+		<option name="position" value="topleft" type="string" />
+		<option name="start_position" value="left" type="string" />
+		<option name="margin_x" value="10" type="int" />
+		<option name="margin_y" value="10" type="int" />
+		<option name="display_title" value="true" type="bool" />
+		<option name="title" value="project_floor_title" type="string" />
+		<option name="title_font" value="Verdana" type="string" />
+		<option name="title_size" value="14" type="int" />
+		<option name="title_weight" value="normal" type="string" />
+		<option name="title_decoration" value="normal" type="string" />
+		<option name="title_color" value="000000" type="string" />
+		<option name="close_displayed" value="false" type="bool" />
+		<option name="close_text" value="floorPlandisplay_close_text" type="string" />
+
+		<option name="background_color" value="f2f2f2" type="string" />
+		<option name="background_alpha" value="0" type="float" />
+		<option name="overlay_displayed" value="false" type="bool" />
+		<option name="overlay_color" value="000000" type="string" />
+		<option name="overlay_alpha" value="0.50000762951094835" type="float" />
+
+		<option name="padding" value="0" type="int" />
+		<option name="topleft_radius" value="0" type="int" />
+		<option name="topright_radius" value="0" type="int" />
+		<option name="bottomleft_radius" value="0" type="int" />
+		<option name="bottomright_radius" value="0" type="int" />
+		<option name="area_border_width" value="0" type="int" />
+		<option name="area_border_color" value="f2f2f2" type="string" />
+		<option name="area_border_alpha" value="1" type="float" />
+		<option name="area_width" value="400" type="int" />
+		<option name="area_height" value="240" type="int" />
+		<option name="area_width_unit" value="pixel" type="string" />
+		<option name="area_height_unit" value="pixel" type="string" />
+		<option name="animation" value="true" type="bool" />
+		<option name="animation_duration" value="500" type="int" />
+		<option name="close_on_click" value="true" type="bool" />
+		<option name="refresh_content" value="false" type="bool" />
+		<option name="open_callback" value="addKolorFloorPlan('floorPlan', 'floorPlanArea_floorplanDIV');" type="string" />
+		<option name="close_callback" value="invokeKrFunction('closeKolorAreaCallback_floorPlanArea')" type="string" />
+		<option name="zorder" value="10" type="int" />
+		<option name="use_i18n" value="true" type="bool" />
+	</settings>
+	</ptplugin>
+	
+	<action name="kolorAreaJsReady_floorPlanArea">
+		set(ptplugin[floorPlanArea].jsready, true);
+
+	</action>
+	
+	<action name="openKolorArea_floorPlanArea">
+		ifnot(ptplugin[floorPlanArea].isOpen,
+			set(ptplugin[floorPlanArea].isOpen, true);
+			
+			js(showKolorArea(floorPlanArea, &lt;div id="floorPlanArea_floorplanDIV"&gt;&lt;/div&gt;));
+			events.dispatch(onremovedisplayedobject);
+		);
+	</action>
+	
+	<action name="closeKolorArea_floorPlanArea">
+		if(ptplugin[floorPlanArea].isOpen,
+			js(invokePluginFunction(floorPlanArea, closeKolorArea));
+		);
+	</action>
+	
+	<action name="toggleKolorArea_floorPlanArea">
+		if(ptplugin[floorPlanArea].isOpen,
+			closeKolorArea_floorPlanArea();
+		,
+			openKolorArea_floorPlanArea();
+		);
+	</action>
+	
+	<action name="closeKolorAreaCallback_floorPlanArea">
+		set(ptplugin[floorPlanArea].isOpen, false);hideFloorplan();
+
+	</action>
+	
+	<action name="changeTitleKolorArea_floorPlanArea">
+		js(invokePluginFunction(floorPlanArea, changeTitle, %1));
+	</action>
+	
+	<action name="showKolorArea_floorPlanArea">
+		set(ptplugin[floorPlanArea].isOpen, true);
+		
+		js(invokePluginFunction(floorPlanArea, showKolorArea, %1));
+		events.dispatch(onremovedisplayedobject);
+	</action>
+		
+	<action name="hideKolorArea_floorPlanArea">
+		
+		set(ptplugin[floorPlanArea].isOpen, false);
+		js(invokePluginFunction(floorPlanArea, hideKolorArea, %1));
+	</action>
+	
+	<events name="kolorAreaEvents_floorPlanArea" 
+		keep="true"
+		hidetourcontrols="if(loadedState_floorPlanArea,if(ptplugin[floorPlanArea].isOpen,set(restore_floorPlanArea, true);hideKolorArea_floorPlanArea(false);,set(restore_floorPlanArea, false);););"
+		showtourcontrols="if(tour_displayfloorplan,if(restore_floorPlanArea,showKolorArea_floorPlanArea(false);););set(loadedState_floorPlanArea, get(tour_displaycontrols));"
+	/>
+	
+<!-- ********** -->
+<!-- Logo1 -->
+<!-- id : logo1 -->
+<!-- ********** -->
+  <!-- EMPTY PICTURE : no image file -->
+<!-- ********** -->
+<!-- Caixa de ferramentas da panorâmica -->
+<!-- id : panoramacombobox -->
+<!-- ********** -->
+
+<events name="panoramacomboboxStartTourEvents" onTourStart="set(layer[panoramacombobox].isStarted, true);if(layer[panoramacombobox].isLoaded,panoramacomboboxShow(););" keep="true" />
+
+
+  <layer name="panoramacombobox"
+         url="%FIRSTXML%/graphics/combobox.swf"
+         alturl="%FIRSTXML%/graphics/combobox.js"
+         keep="true"
+         visible="false"
+         zorder="12"
+         align="topright"
+         x="5" y="10"
+         rowcount="10"
+         onloaded="panoramacomboboxLoaded();"
+         isStarted="false"
+         isLoaded="false"
+         itemcount="0"
+         itemfontsize.normal="14"
+         itempadding.normal="8"
+         itemfontsize.mobile="11"
+         itempadding.mobile="5"
+         cbdesignscale.mobile="1"
+         />
+
+  <action name="panoramacomboboxLoaded">
+    
+    layer[panoramacombobox].removeAll();
+    set(layer[panoramacombobox].itemcount, 0);
+    
+    panoramacomboboxAddItem(pano2033_title, pano2033, pano2033, false);
+    panoramacomboboxAddItem(pano2032_title, pano2032, pano2032, false);
+    panoramacomboboxAddItem(pano2037_title, pano2037, pano2037, false);
+    panoramacomboboxAddItem(pano2034_title, pano2034, pano2034, false);
+    panoramacomboboxAddItem(pano2035_title, pano2035, pano2035, false);
+    panoramacomboboxAddItem(pano2036_title, pano2036, pano2036, false);
+    set(layer[panoramacombobox].isLoaded, true);
+    
+    if(layer[panoramacombobox].isStarted,
+      panoramacomboboxShow();
+    );
+  </action>
+
+
+  <action name="panoramacomboboxAddItem">
+    getmessage(caption, %1);
+    
+    indexoftxt(found, get(caption), '&amp;');
+    if(found GE 0,
+      subtxt(part1, get(caption), 0, get(found));
+      add(found, 1);
+      subtxt(part2, get(caption), get(found), get(caption.length));
+      txtadd(caption, get(part1), '&amp;', get(part2));
+    );
+    if(%4,
+      txtadd(title, "&#x00A0;&#x00A0;&#x00A0;", get(caption));
+    ,
+      set(title, get(caption));
+    );
+    layer[panoramacombobox].addIdItem(%2, get(title), mainloadscene(%3));
+    inc(layer[panoramacombobox].itemcount);
+  </action>
+
+  <action name="panoramacomboboxUpdateLanguage">
+    layer[panoramacombobox].closeList();
+    layer[panoramacombobox].removeAll();
+    set(layer[panoramacombobox].itemcount, 0);
+
+    panoramacomboboxAddItem(pano2033_title, pano2033, pano2033, false);
+    panoramacomboboxAddItem(pano2032_title, pano2032, pano2032, false);
+    panoramacomboboxAddItem(pano2037_title, pano2037, pano2037, false);
+    panoramacomboboxAddItem(pano2034_title, pano2034, pano2034, false);
+    panoramacomboboxAddItem(pano2035_title, pano2035, pano2035, false);
+    panoramacomboboxAddItem(pano2036_title, pano2036, pano2036, false);
+
+    panoramacomboboxUpdateList();
+  </action>
+
+  <events name="panoramacomboboxEvents"
+          hidetourcontrols="panoramacomboboxHide();"
+          showtourcontrols="panoramacomboboxShow();"
+          onnewpano="panoramacomboboxOnPanorama();"
+          changetourlanguage="panoramacomboboxUpdateLanguage();"
+          keep="true"/>
+
+  <action name="panoramacomboboxHide">
+    set(layer[panoramacombobox].visible, false);
+  </action>
+  <action name="panoramacomboboxShow">
+  if(layer[panoramacombobox].isLoaded,
+    if (layer[panoramacombobox].itemcount GT 0,
+      set(layer[panoramacombobox].visible, true);
+    ,
+      set(layer[panoramacombobox].visible, false);
+    );
+  ,
+    set(layer[panoramacombobox].visible, false);
+  );
+  </action>
+
+  <action name="panoramacomboboxOnPanorama">
+    if(layer[panoramacombobox].isLoaded,
+      panoramacomboboxUpdateList();
+    ,
+      delayedcall(0.2, panoramacomboboxOnPanorama);
+    );
+  </action>
+
+
+  <action name="panoramacomboboxUpdateList">
+    set(itemtoselect, get(scene[get(xml.scene)].name));
+    layer[panoramacombobox].selectIdItem(get(itemtoselect));
+  </action>
+
+
+<action name="viewControlMoveUp">
+	if(%1,
+		if(%2,
+			set(isfullvertical, false);
+			ifnot(scene[get(xml.scene)].planar,
+				sub(viewvfov, panoview.vmax, panoview.vmin);
+				if (viewvfov == 180,
+					set(isfullvertical, true);
+				);
+			);
+			if(isfullvertical == false AND calc(view.vlookat-%2) LT view.vlookatmin,
+				moveto(get(view.hlookat), get(view.vlookatmin));
+			,
+				moveto(get(view.hlookat), calc(view.vlookat-%2));
+			);
+		,
+			set(vlookat_moveforce, -1);
+			delayedcall(0.1, viewControlMoveVertStop());
+		);
+	,
+		set(vlookat_moveforce, -1);
+	);
+</action>
+<action name="viewControlMoveDown">
+	if(%1,
+		if(%2,
+			set(isfullvertical, false);
+			ifnot(scene[get(xml.scene)].planar,
+				sub(viewvfov, panoview.vmax, panoview.vmin);
+				if (viewvfov == 180,
+					set(isfullvertical, true);
+				);
+			);
+			if(sceneisfull360 == false AND calc(view.vlookat+%2) GT view.vlookatmax,
+				moveto(get(view.hlookat), get(view.vlookatmax));
+			,
+				moveto(get(view.hlookat), calc(view.vlookat+%2));
+			);
+		,
+			set(vlookat_moveforce, +1);
+			delayedcall(0.1, viewControlMoveVertStop());
+		);
+	,
+		set(vlookat_moveforce, +1);
+	);
+</action>
+<action name="viewControlMoveLeft">
+	if(%1,
+		if(%2,
+			set(isfullhorizontal, false);
+			ifnot(scene[get(xml.scene)].planar,
+				sub(viewhfov, panoview.hmax, panoview.hmin);
+				if (viewhfov == 360,
+					set(isfullhorizontal, true);
+				);
+			);
+			if(isfullhorizontal == false AND calc(view.hlookat-%2) LT view.hlookatmin,
+				moveto(get(view.hlookatmin), get(view.vlookat));
+			,
+				moveto(calc(view.hlookat-%2), get(view.vlookat));
+			);
+		,
+			set(hlookat_moveforce, -1);
+			delayedcall(0.1, viewControlMoveHoriStop());
+		);
+	,
+		set(hlookat_moveforce, -1);
+	);
+</action>
+<action name="viewControlMoveRight">
+	if(%1,
+		if(%2,
+			set(isfullhorizontal, false);
+			ifnot(scene[get(xml.scene)].planar,
+				sub(viewhfov, panoview.hmax, panoview.hmin);
+				if (viewhfov == 360,
+					set(isfullhorizontal, true);
+				);
+			);
+			if(isfullhorizontal == false AND calc(view.hlookat+%2) GT view.hlookatmax,
+				moveto(get(view.hlookatmax), get(view.vlookat));
+			,
+				moveto(calc(view.hlookat+%2), get(view.vlookat));
+			);
+		,
+			set(hlookat_moveforce, +1);
+			delayedcall(0.1, viewControlMoveHoriStop());
+			
+		);
+	,
+		set(hlookat_moveforce, +1);
+	);
+</action>
+<action name="viewControlMoveHoriStop">
+	set(hlookat_moveforce, 0);
+</action>
+<action name="viewControlMoveVertStop">
+	set(vlookat_moveforce, 0);
+</action>
+
+<action name="viewControlZoomIn">
+	if(%1,
+		if(%2,
+			if(%2 LT view.fovmin,
+				zoomto(get(view.fovmin));
+			,
+				if(%2 LT view.fov,
+					zoomto(%2);
+				);
+			);
+		,
+			set(fov_moveforce, -1);
+			delayedcall(0.1, viewControlZoomStop());
+		);
+	,
+		set(fov_moveforce, -1);
+	);
+</action>
+<action name="viewControlZoomOut">
+	if(%1,
+		if(%2,
+			if(%2 GT view.fovmax,
+				zoomto(get(view.fovmax));
+			,
+				if(%2 GT view.fov,
+					zoomto(%2);
+				);
+			);
+		,
+			set(fov_moveforce, +1);
+			delayedcall(0.1, viewControlZoomStop());
+		);
+	,
+		set(fov_moveforce, +1);
+	);
+</action>
+<action name="viewControlZoomStop">
+	set(fov_moveforce, 0);
+</action>
+
+  <action name="displayImage">
+    if (layer[displayedStandardImage],
+      if(layer[displayedStandardImage].doNotDeleteMe,
+        set(layer[displayedStandardImage].currentCall, false);
+        set(layer[displayedStandardImage].doNotDeleteMe, false);
+        
+        if (%1 == layer[displayedStandardImage].url,
+          applyDisplayedImageObjectAnimation(%8);
+        ,
+          setDisplayedImageObjectParameters(%1, %2, %3, %4, %5, %6, %7, %8, %9, %10);
+        );
+      ,
+        set(layer[displayedStandardImage].currentCall, false);
+        set(layer[displayedStandardImage].doNotDeleteMe, true);
+        events.dispatch(onremovedisplayedobject);
+        delayedcall(0.2,displayImage(%1, %2, %3, %4, %5, %6, %7, %8, %9, %10, %11, %12););
+      );
+    ,
+      if(%10,
+        addlayer(displayedStandardImageOverlay);
+        set(layer[displayedStandardImageOverlay].keep, false);
+        set(layer[displayedStandardImageOverlay].width, 100%);
+        set(layer[displayedStandardImageOverlay].height, 100%);
+        set(layer[displayedStandardImageOverlay].type, container);
+        set(layer[displayedStandardImageOverlay].zorder, 98);
+        set(layer[displayedStandardImageOverlay].visible, false);
+        set(layer[displayedStandardImageOverlay].onclick, applyDisplayedImageObjectAnimation(%8););
+        set(layer[displayedStandardImageOverlay].bgcolor, "0x%11");
+        set(layer[displayedStandardImageOverlay].bgalpha, %12);
+        set(layer[displayedStandardImageOverlay].bgcapture, true);
+      );
+      addlayer(displayedStandardImage);
+      set(layer[displayedStandardImage].keep, false);
+      set(layer[displayedStandardImage].onclick, applyDisplayedImageObjectAnimation(%8););
+      set(layer[displayedStandardImage].zorder , 99);
+      set(layer[displayedStandardImage].currentCall, true);
+      set(layer[displayedStandardImage].doNotDeleteMe, true);
+      set(layer[displayedStandardImage].onloaded, resizeDisplayedImageObject());
+      events.dispatch(onremovedisplayedobject);
+      delayedcall(0.2,displayImage(%1, %2, %3, %4, %5, %6, %7, %8, %9, %10, %11, %12););
+      set(layer[displayedStandardImage].visible, false);
+    );
+  </action>
+  <action name="applyDisplayedImageObjectAnimation">resumeautorotation(forcehotspot);
+
+    if (%1,
+      stoptween(layer[displayedStandardImage].width, layer[displayedStandardImage].height);
+      tween(layer[displayedStandardImage].width|layer[displayedStandardImage].height, 1|1, 1, easeOutQuad, WAIT);
+      if(layer[displayedStandardImage].overlay,removelayer(displayedStandardImageOverlay););removelayer(displayedStandardImage);
+    ,
+      if(layer[displayedStandardImage].overlay,removelayer(displayedStandardImageOverlay););removelayer(displayedStandardImage);
+    );
+  </action>
+  <action name="setDisplayedImageObjectParameters">
+    set(layer[displayedStandardImage].url       , %1);
+    set(layer[displayedStandardImage].align     , %2);
+    set(layer[displayedStandardImage].x         , %3);
+    set(layer[displayedStandardImage].y         , %4);
+    set(layer[displayedStandardImage].imgwidth  , %5);
+    set(layer[displayedStandardImage].imgheight , %6);
+    set(layer[displayedStandardImage].animated  , %8);
+    set(layer[displayedStandardImage].applyratio, %9);
+    set(layer[displayedStandardImage].overlay   , %10);
+    if (%7,pauseautorotation(forcehotspot);
+);
+  </action>
+  <action name="resizeDisplayedImageObject">
+    if(layer[displayedStandardImage].url,
+    set(layer[displayedStandardImage].fullwidth, get(layer[displayedStandardImage].width));
+    set(layer[displayedStandardImage].fullheight, get(layer[displayedStandardImage].height));
+    if(layer[displayedStandardImage].animated,
+      set(layer[displayedStandardImage].width , 1);
+      set(layer[displayedStandardImage].height, 1);
+    );
+    if(layer[displayedStandardImage].imgwidth != "" AND layer[displayedStandardImage].imgheight != "",
+      if(layer[displayedStandardImage].imgwidth == "prop",
+        set(tempDisplayedImageObjectHeight, get(layer[displayedStandardImage].imgheight));
+        indexoftxt(tempDisplayedImageObjectHeightPercent, get(tempDisplayedImageObjectHeight), "%");
+        if(tempDisplayedImageObjectHeightPercent GT 0,
+          txtreplace(tempDisplayedImageObjectHeight, '%', '');
+          mul(tempDisplayedImageObjectHeight, get(stageheight));
+          div(tempDisplayedImageObjectHeight, 100);
+          Math.round(tempDisplayedImageObjectHeight);
+        );
+        mul(flyingImgWidth,get(layer[displayedStandardImage].fullwidth),get(tempDisplayedImageObjectHeight));
+        div(flyingImgWidth,get(layer[displayedStandardImage].fullheight));
+        Math.round(flyingImgWidth);
+        set(layer[displayedStandardImage].imgwidth , get(flyingImgWidth));
+        set(layer[displayedStandardImage].imgheight, get(tempDisplayedImageObjectHeight));
+      ,
+        if(layer[displayedStandardImage].imgheight == "prop",
+          set(tempDisplayedImageObjectWidth, get(layer[displayedStandardImage].imgwidth));
+          indexoftxt(tempDisplayedImageObjectWidthPercent, get(tempDisplayedImageObjectWidth), "%");
+          if(tempDisplayedImageObjectWidthPercent GT 0,
+            txtreplace(tempDisplayedImageObjectWidth, '%', '');
+            mul(tempDisplayedImageObjectWidth, get(stagewidth));
+            div(tempDisplayedImageObjectWidth, 100);
+            Math.round(tempDisplayedImageObjectWidth);
+          );
+          mul(flyingImgHeight,get(layer[displayedStandardImage].fullheight),get(tempDisplayedImageObjectWidth));
+          div(flyingImgHeight,get(layer[displayedStandardImage].fullwidth));
+          Math.round(flyingImgHeight);
+          set(layer[displayedStandardImage].imgwidth , get(tempDisplayedImageObjectWidth));
+          set(layer[displayedStandardImage].imgheight , get(flyingImgHeight));
+        ,
+          set(tempDisplayedImageObjectWidth, get(layer[displayedStandardImage].imgwidth));
+          set(tempDisplayedImageObjectHeight, get(layer[displayedStandardImage].imgheight));
+          indexoftxt(tempDisplayedImageObjectWidthPercent, get(tempDisplayedImageObjectWidth), "%");
+          indexoftxt(tempDisplayedImageObjectHeightPercent, get(tempDisplayedImageObjectHeight), "%");
+          if(tempDisplayedImageObjectWidthPercent GT 0,
+            txtreplace(tempDisplayedImageObjectWidth, '%', '');
+            mul(tempDisplayedImageObjectWidth, get(stagewidth));
+            div(tempDisplayedImageObjectWidth, 100);
+            Math.round(tempDisplayedImageObjectWidth);
+          );
+          if(tempDisplayedImageObjectHeightPercent GT 0,
+            txtreplace(tempDisplayedImageObjectHeight, '%', '');
+            mul(tempDisplayedImageObjectHeight, get(stageheight));
+            div(tempDisplayedImageObjectHeight, 100);
+            Math.round(tempDisplayedImageObjectHeight);
+          );
+          set(layer[displayedStandardImage].imgwidth , get(tempDisplayedImageObjectWidth));
+          set(layer[displayedStandardImage].imgheight, get(tempDisplayedImageObjectHeight));
+        );
+      );
+    ,
+      set(layer[displayedStandardImage].imgwidth , get(layer[displayedStandardImage].fullwidth));
+      set(layer[displayedStandardImage].imgheight, get(layer[displayedStandardImage].fullheight));
+    );
+    
+    set(resizedwidth, get(layer[displayedStandardImage].imgwidth));
+    set(resizedheight, get(layer[displayedStandardImage].imgheight));
+    if(layer[displayedStandardImage].applyratio,
+      sub(resizedstagewidth, get(stagewidth), get(layer[displayedStandardImage].x));
+      sub(resizedstageheight, get(stageheight), get(layer[displayedStandardImage].y));
+      Math.abs(resizedstagewidth);
+      Math.abs(resizedstageheight);
+      if(resizedwidth GT resizedstagewidth,
+        mul(tempresizedheight, get(resizedheight), get(resizedstagewidth));
+        div(tempresizedheight, get(resizedwidth));
+        Math.round(tempresizedheight);
+        set(resizedwidth, get(resizedstagewidth));
+        set(resizedheight, get(tempresizedheight));
+      );
+      if(resizedheight GT resizedstageheight,
+        mul(tempresizedwidth, get(resizedwidth), get(resizedstageheight));
+        div(tempresizedwidth, get(resizedheight));
+        Math.round(tempresizedwidth);
+        set(resizedheight, get(resizedstageheight));
+        set(resizedwidth, get(tempresizedwidth));
+      );
+    );
+    
+    if(layer[displayedStandardImage].animated,
+      set(layer[displayedStandardImage].animated, false);
+      tween(layer[displayedStandardImage].width , get(resizedwidth), 1, easeOutQuad);
+      tween(layer[displayedStandardImage].height, get(resizedheight), 1, easeOutQuad);
+    ,
+      set(layer[displayedStandardImage].width , get(resizedwidth));
+      set(layer[displayedStandardImage].height, get(resizedheight));
+    );
+    if(layer[displayedStandardImage].overlay,set(layer[displayedStandardImageOverlay].visible, true););
+    set(layer[displayedStandardImage].visible, true);
+    ,
+      delayedcall(0.2,resizeDisplayedImageObject(););
+    );
+  </action>
+  <events name="displayedImageObjectEvents" keep="true" onremovedisplayedobject="displayedImageObjectOnRemoveDisplayedObject" onresize="if(layer[displayedStandardImage],resizeDisplayedImageObject());" />
+  <action name="displayedImageObjectOnRemoveDisplayedObject">
+    ifnot(layer[displayedStandardImage].currentCall,if(layer[displayedStandardImage].visible,resumeautorotation(forcehotspot);
+
+      if(layer[displayedStandardImage].overlay,removelayer(displayedStandardImageOverlay););
+      removelayer(displayedStandardImage);
+    ););
+  </action>
+
+
+  <action name="enableGyroscope">
+    changeGyroscopeState(true);
+  </action>
+  <action name="disableGyroscope">
+    changeGyroscopeState(false);
+  </action>
+
+
+  <!-- Share Tour -->
+  <action name="shareTour">events.dispatch(onsharetour);</action>
+
+  <!-- Hide / Show Controls -->
+  <action name="hideTourControls">set(tour_displaycontrols, false);events.dispatch(hidetourcontrols);</action>
+  <action name="showTourControls">set(tour_displaycontrols, true); events.dispatch(showtourcontrols);</action>
+
+
+  <!-- Fullscreen Management -->
+  <action name="exitFullScreen" devices="fullscreensupport">set(tour_fullscreen,false);js(setFullscreen(false));</action>
+  <action name="enterFullScreen" devices="fullscreensupport">set(tour_fullscreen,true);js(setFullscreen(true));</action>
+  <action name="switchFullScreen">if(tour_fullscreen,exitFullScreen();,enterFullScreen(););</action>
+
+  
+  <events name="krpanoExitFullscreenEvent"
+    onexitfullscreen="if(tour_fullscreen,exitFullScreenChangeEvent(););"
+    keep="true" />
+
+  <action name="exitFullScreenChangeEvent" devices="fullscreensupport">set(tour_fullscreen,false);events.dispatch(onexitfullscreen);</action>
+  <action name="enterFullScreenChangeEvent" devices="fullscreensupport">set(tour_fullscreen,true);events.dispatch(onenterfullscreen);</action>
+  <action name="exitFullScreenFallback">set(fullscreen,false);</action>
+  <action name="enterFullScreenFallback">set(fullscreen,true);</action>
+  
+  <action name="resizeFullScreenEvent">delayedcall(0,updatescreen(););</action>
+
+  <!-- FLOORPLAN -->
+  <action name="hideFloorplan">set(tour_displayfloorplan, false);events.dispatch(onhidetourfloorplan);</action>
+  <action name="showFloorplan">set(tour_displayfloorplan, true); events.dispatch(onshowtourfloorplan);</action>
+
+
+</krpano>
