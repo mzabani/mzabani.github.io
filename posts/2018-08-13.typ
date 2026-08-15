@@ -1,10 +1,6 @@
-#import "../template.typ": page
-
-#show: page.with(
-  title: "Typeclass induction and developing a QuickCheck-like library",
-  subtitle: "Posted on August 13, 2018",
-)
-
+#let title = "Typeclass induction and developing a QuickCheck-like library"
+#let subtitle = "Posted on August 13, 2018"
+#let body = [
 = What is typeclass induction
 
 In this post we'll approach a technique called Typeclass induction, which allows us to take polymorphism to an entirely new level!
@@ -163,3 +159,4 @@ test f = and $ fst $ foldl (\(resList, g) _ -> let (res, g') = testWith g f in (
 Our `test` function tests the input function 100 times, weaving `RandomGen` through every randomly generated parameter. And this, my friends, is a 14-line property checking library (counting empty lines) written using typeclass induction. Again, it always amazes me how Haskell can be concise and extremely powerful at the same time.
 
 I hope you liked this post. Suggestions and corrections are very very welcome.
+]

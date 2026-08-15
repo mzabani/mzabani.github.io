@@ -1,7 +1,5 @@
-#import "template.typ": page
-
-#show: page.with(title: "Home", home: true)
-
+#let title = "Home"
+#let body = [
 = Welcome
 
 This is just one more software development blog, with a bit more Haskell than other things.
@@ -19,4 +17,5 @@ Older posts are on my Wordpress at #link("https://mzabani.wordpress.com/")[#"htt
   #html.elem("li")[#link("./posts/2018-02-27.html")[Investment strategies, lazy evaluation and memoization] - February 27, 2018]
   #html.elem("li")[#link("./posts/2018-01-02.html")[One equality operator to rule them all] - January 2, 2018]
   #html.elem("li")[#link("./posts/2017-06-22.html")[Interfaces and typeclasses: Number APIs in C\# and Haskell] - June 22, 2017]
+]
 ]

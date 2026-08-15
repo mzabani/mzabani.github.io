@@ -1,10 +1,6 @@
-#import "../template.typ": page
-
-#show: page.with(
-  title: "Concurrently processing streams in Haskell",
-  subtitle: "Posted on February 12, 2025",
-)
-
+#let title = "Concurrently processing streams in Haskell"
+#let subtitle = "Posted on February 12, 2025"
+#let body = [
 This article covers how I made #link("https://github.com/mzabani/codd")[codd], a PostgreSQL migration application tool written by me in Haskell, speed up the application of a `COPY` statement with 5.65 million lines from 12.1s to 9.8s (on my machine), a 19% reduction in time, bringing it much closer to the time the official `psql` tool takes to apply the same migration - 9.4s.
 
 The nice thing is that the abstraction used here is hopefully reusable across a wider range of applications and is easy to apply.
@@ -241,3 +237,4 @@ forceStreamConcurrentlyInspect returnedStreamNotConsumedLinearly futureElementsQ
         Right (Left r) -> S.Return r
         Left ex -> S.Effect $ throwIO ex
 ```
+]

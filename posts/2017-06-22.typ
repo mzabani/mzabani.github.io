@@ -1,10 +1,6 @@
-#import "../template.typ": page
-
-#show: page.with(
-  title: "Interfaces and typeclasses: Number APIs in C# and Haskell",
-  subtitle: "Posted on June 22, 2017",
-)
-
+#let title = "Interfaces and typeclasses: Number APIs in C# and Haskell"
+#let subtitle = "Posted on June 22, 2017"
+#let body = [
 = C\#’s limitations
 
 In C\# sometimes I sorely miss something like an `INumber` interface with methods `Add`, `Subtract`, `Multiply` and others. The lack of this means it is cumbersome to write generic code on numbers. It means that instead of writing something like:
@@ -143,3 +139,4 @@ C\# is great and a lot of what we achieved with Haskell could be achieved throug
 So that's it. I hope you've enjoyed your reading, but most of all I hope any C\# or Java (or any other mainstream language) developer that reads this gives Haskell a shot. It really is an amazing language.
 
 Any comments and corrections are very welcome!
+]

@@ -1,10 +1,6 @@
-#import "../template.typ": page
-
-#show: page.with(
-  title: "Algorithms to split group expenses",
-  subtitle: "Posted on February 4, 2024",
-)
-
+#let title = "Algorithms to split group expenses"
+#let subtitle = "Posted on February 4, 2024"
+#let body = [
 = The problem
 
 When traveling with friends or family it is typical that some some people will pay for things that others will also benefit from. Maybe Joe pays for the rented place, Jane pays for everyone's dinner one night, Bob buys himself and Alice lunch some day.
@@ -131,3 +127,4 @@ This does change the distribution of transactions, though, as now Joe will recei
 This is the source of my embarassment: there's nothing wrong with negative transactions. As usual, I was too keen on working with formalism to prove a property that would restrict the problem. Looking for restrictions is sane, but using formalism too soon to get there instead of developing an intuition around the problem is something I have always done, and it has once again gotten in my way, even for such a simple problem. In the end, I proved an unnecessary restriction, and it wasn't hard to see it by just looking at the transactions table and reasoning informally.
 
 I considered not publishing this post, but thought maybe it helps me find other people that suffer from "formalitis" and get some tips. Please comment if you have any.
+]

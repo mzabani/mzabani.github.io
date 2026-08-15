@@ -1,11 +1,7 @@
-#import "../template.typ": page
-
-#show: page.with(
-  title: "Limitations of SSI's implementation in PostgreSQL",
-  subtitle: "Posted on December 8, 2024",
-)
-
-In the #link("../posts/2024-11-20-pg-what-serializable-isolation-really-means.html")[previous article] I covered why Serializable transactions are great for a more worry-free development of concurrent applications. Now we're going to cover some details of how it's implemented in postgresql so we understand some of its limitations. Essentially this post is about false-positive detection of serialization anomalies.
+#let title = "Limitations of SSI's implementation in PostgreSQL"
+#let subtitle = "Posted on December 8, 2024"
+#let body = [
+In the #link(<pg-serializable-isolation>)[previous article] I covered why Serializable transactions are great for a more worry-free development of concurrent applications. Now we're going to cover some details of how it's implemented in postgresql so we understand some of its limitations. Essentially this post is about false-positive detection of serialization anomalies.
 
 Let's create a test table with a large number of rows first, the smallest Id being 1000 and the largest being 1000000:
 
@@ -148,3 +144,4 @@ There are other interesting things about SSI in postgres, though I'm not sure I'
 - #link("https://github.com/postgres/postgres/blob/master/src/backend/storage/lmgr/README-SSI")[README-SSI] in postgres's codebase discusses the implementation and also has a very interesting "Several optimizations are possible" section.
 - Dan Ports's and Kevin Grittner's #link("https://arxiv.org/pdf/1208.4179")[SSI paper].
 - pg-hackers #link("https://www.postgresql.org/message-id/flat/CAEepm%3D2GK3FVdnt5V3d%2Bh9njWipCv_fNL%3DwjxyUhzsF%3D0PcbNg%40mail.gmail.com")[discussion thread] of Thomas Munro's unmerged patches with some improvements to postgres' SSI implementation.
+]

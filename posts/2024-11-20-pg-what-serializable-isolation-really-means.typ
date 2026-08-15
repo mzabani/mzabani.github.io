@@ -1,10 +1,6 @@
-#import "../template.typ": page
-
-#show: page.with(
-  title: "What Serializable isolation really means in PostgreSQL",
-  subtitle: "Posted on November 20, 2024",
-)
-
+#let title = "What Serializable isolation really means in PostgreSQL"
+#let subtitle = "Posted on November 20, 2024"
+#let body = [
 Many of us are familiar with the typical transactional isolation levels in relation databases. Read-committed, Repeatable-Read and Serializable are examples. And there are many articles and sources listing the undesirable phenomena some of these isolation levels protect us from, like dirty reads, phantom reads and serialization anomalies.
 
 One also finds phrases like serializable transactions are "guaranteed to produce the same effect as running them one at a time in some order", but what kind of strangeness might arise from not running as such? There are also Stack Overflow answers suggesting accounting and enforcing credit limits is an example where serializability is important, but what does that _really_ mean? PostgreSQL's #link("https://www.postgresql.org/docs/current/transaction-iso.html")[docs] say that "a read-only transaction at this level may see a control record updated to show that a batch has been completed but not see one of the detail records which is logically part of the batch because it read an earlier revision of the control record", but what does that _really_ mean?
@@ -123,3 +119,4 @@ Hopefully I'll find time to write about some limitations of PostgreSQL's current
 = References
 
 #link("https://arxiv.org/pdf/1208.4179")[1 - Kevin Grittner's and Dan Ports's paper on SSI in PostgreSQL]
+]

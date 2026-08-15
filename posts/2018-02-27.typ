@@ -1,10 +1,6 @@
-#import "../template.typ": page
-
-#show: page.with(
-  title: "Investment strategies, lazy evaluation and memoization",
-  subtitle: "Posted on February 27, 2018",
-)
-
+#let title = "Investment strategies, lazy evaluation and memoization"
+#let subtitle = "Posted on February 27, 2018"
+#let body = [
 = The problem
 
 This article will cover an interesting problem: given a set of possible investments, each with different tax rates, yearly rates and minimum time until withdrawal, what is the best investment strategy for the next 10, 20 or $n$ years?
@@ -159,3 +155,4 @@ ghci> fmap name $ bestStrategyGood 11 availableInvestments
 So it seems that buying investment 3, rebuying it and then buying investment 2 is the best strategy in this case.
 
 That's it! I hope you liked it, and if it helps, do know that this problem is still solvable with the same algorithm if the tax of each investment is a function of the amount of time since the investment title was purchased and if the time until withdrawal is either an exact time or a minimum time. It is also possible to include inflation-correcting investments if you pass around some estimated inflation; all of this with only minor modifications. Also, feel free to change the time unit to months and get something much more precise for your investments!
+]

@@ -1,10 +1,6 @@
-#import "../template.typ": page
-
-#show: page.with(
-  title: "One equality operator to rule them all",
-  subtitle: "Posted on January 2, 2018",
-)
-
+#let title = "One equality operator to rule them all"
+#let subtitle = "Posted on January 2, 2018"
+#let body = [
 = Two kinds of equality
 
 In a lot of programming languages there are two different concepts for equality: Reference equality (also called Identity) and Value equality.
@@ -68,3 +64,4 @@ With type classes, we could make `==` an operator/function of some `Equatable<T>
 So.. what are your thoughts on this? Do you have counter-examples or do you disagree on some issue? Can you think of more unintended consequences by changing the language as I proposed (I'm sure there are many!)?
 
 *EDIT (2018-01-06 14:40):* I'm not sure how I missed this, but the new feature of nullable reference types makes my proposed language changes mostly unnecessary. It is also a breaking change, of course, but not only does it improve the language significantly, it also improves the state of equality. After opting in for this new feature, just make sure you never use `==` again. Stick to `Equals` and you should mostly be fine. I say "mostly" because not even `Equals` is always overridden to mean value equality. In the case of `StringBuilder`, for instance, its `Equals(object)` is inherited from `Object` and tests for reference equality while its `IEquatable<StringBuilder>.Equals(StringBuilder)` method tests for value equality. I believe this only strengthens the claim that there should be a single general purpose equality operator, keeping reference equality only as a means to implement equality in some cases.
+]
