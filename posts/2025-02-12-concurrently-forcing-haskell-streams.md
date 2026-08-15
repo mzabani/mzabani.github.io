@@ -38,7 +38,7 @@ forceStreamConcurrently ::
   Stream (Of a) m r
 ```
 
-The "simple" implementation with a blocking bounded queue made total time go from 12.s to 11.4s even with `+RTS -N1`. Here's some pseudo-code of the application loop with such an implementation (pseudo-code ended up being clearer than Haskell here to better convey the idea):
+The "simple" implementation with a blocking bounded queue made total time go from 12.1s to 11.4s even with `+RTS -N1`. Here's some pseudo-code of the application loop with such an implementation (pseudo-code ended up being clearer than Haskell here to better convey the idea):
 
 
 ```python

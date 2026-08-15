@@ -92,7 +92,7 @@ class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb2-1"><a 
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Stream</span> (<span class="dt">Of</span> a) m r <span class="ot">-&gt;</span></span>
 <span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Stream</span> (<span class="dt">Of</span> a) m r</span></code></pre></div>
 <p>The “simple” implementation with a blocking bounded queue made total
-time go from 12.s to 11.4s even with <code>+RTS -N1</code>. Here’s some
+time go from 12.1s to 11.4s even with <code>+RTS -N1</code>. Here’s some
 pseudo-code of the application loop with such an implementation
 (pseudo-code ended up being clearer than Haskell here to better convey
 the idea):</p>
