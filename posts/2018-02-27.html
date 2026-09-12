@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Marcelo Zabani's Blog - Investment strategies, lazy evaluation and memoization</title>
+    <style>
+      /* Alignment */
+      mtable.right-align mtd,
+      mtable mtd.right-align,
+      mtable.left-align mtd.right-align,
+      mtable.aligned mtd:nth-child(odd) {
+        justify-items: end;
+        text-align: right;
+      }
+      mtable.cases mtd,
+      mtable.left-align mtd,
+      mtable mtd.left-align,
+      mtable.aligned mtd:nth-child(even),
+      math:is(:not([display])) > mtable.multiline-equation mtd {
+        justify-items: start;
+        text-align: left;
+      }
+      mtable.cases mtd,
+      mtable.aligned mtd,
+      mtable mtd.flushed,
+      mtable mtd.left-flush {
+        padding-left: 0;
+      }
+      mtable.cases mtd,
+      mtable.aligned mtd,
+      mtable mtd.flushed,
+      mtable mtd.right-flush {
+        padding-right: 0;
+      }
+      
+      /* Tables */
+      mtable {
+        math-style: inherit;
+      }
+      mtd {
+        math-depth: auto-add;
+        math-style: compact;
+        math-shift: compact;
+      }
+      
+      /* Equations */
+      mtable.multiline-equation mtd {
+        math-depth: inherit;
+        math-style: inherit;
+        math-shift: inherit;
+        padding: 0;
+      }
+      math > mtable.multiline-equation mtr:not(:last-child) mtd {
+        padding-bottom: 0.5em;
+      }
+      
+      /* Fractions */
+      mfrac {
+        padding-inline: 0;
+        margin-inline: 0.1em;
+      }
+      
+      /* Accents */
+      mover[accent="true" i] > :first-child {
+        font-feature-settings: "dtls";
+      }
+      mover.dotted[accent="true" i] > :first-child {
+        font-feature-settings: "dtls" 0;
+      }
+      
+      /* Other rules for scriptlevel, displaystyle and math-shift */
+      munder > :nth-child(2),
+      munderover > :nth-child(2) {
+        math-shift: compact
+      }
+      munder[accentunder="true" i] > :not(:first-child),
+      mover[accent="true" i] > :not(:first-child) {
+        math-depth: inherit;
+        math-style: inherit;
+        math-shift: inherit;
+      }
+    </style>
+  </head>
+  <body>
+    <style>
+      
+      :root {
+        color-scheme: light dark;
+        --bg: #ffffff;
+        --fg: #1a1a1a;
+        --muted: #666666;
+        --border: #dddddd;
+        --code-bg: #f5f5f5;
+        --link: #0056b3;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #16181c;
+          --fg: #e6e6e6;
+          --muted: #9a9a9a;
+          --border: #3a3d42;
+          --code-bg: #1f2226;
+          --link: #6cb2ff;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        background: var(--bg);
+        color: var(--fg);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+        line-height: 1.6;
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 0 1.25rem;
+      }
+      a { color: var(--link); }
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        border-bottom: 2px solid var(--fg);
+        margin-bottom: 2rem;
+        padding: 1rem 0;
+      }
+      header .logo a { font-weight: bold; font-size: 1.1rem; text-decoration: none; color: var(--fg); }
+      header nav a { margin-left: 1rem; text-decoration: none; font-weight: bold; text-transform: uppercase; font-size: 0.9rem; color: var(--fg); }
+      h1 { font-size: 1.6rem; margin-bottom: 0.25rem; }
+      h2 { font-size: 1.3rem; margin-top: 2rem; }
+      h3 { font-size: 1.1rem; }
+      .info { color: var(--muted); font-size: 0.85rem; font-style: italic; margin-bottom: 1.5rem; }
+      pre {
+        background: var(--code-bg);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 0.75rem 1rem;
+        overflow-x: auto;
+        font-size: 0.85rem;
+      }
+      code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+      p code, li code { background: var(--code-bg); padding: 0.1em 0.3em; border-radius: 4px; }
+      table { border-collapse: collapse; margin: 1.5rem 0; width: 100%; }
+      table, th, td { border: 1px solid var(--border); }
+      th, td { padding: 0.5rem 0.75rem; text-align: left; vertical-align: top; }
+      ul#post-list li { margin-bottom: 0.5rem; }
+      footer {
+        border-top: 2px solid var(--border);
+        color: var(--muted);
+        font-size: 0.8rem;
+        margin-top: 3rem;
+        padding: 1rem 0;
+        text-align: right;
+      }
+      section[role="doc-endnotes"] { border-top: 1px solid var(--border); margin-top: 2rem; padding-top: 0.5rem; font-size: 0.9rem; color: var(--muted); }
+    </style>
+    <header>
+      <span class="logo"><a href="../index.html">Marcelo Zabani’s Blog</a></span>
+      <nav><a href="../index.html">Home</a></nav>
+    </header>
+    <main>
+      <h1>Investment strategies, lazy evaluation and memoization</h1>
+      <div class="info">Posted on February 27, 2018</div>
+      <h2>The problem</h2>
+      <p>This article will cover an interesting problem: given a set of possible investments, each with different tax rates, yearly rates and minimum time until withdrawal, what is the best investment strategy for the next 10, 20 or <math><mi>𝑛</mi></math> years?</p>
+      <p>For instance, given the following investments:</p>
+      <ul>
+        <li><math><msub><mi>𝑖</mi><mn>1</mn></msub></math> = 9% yearly rate, 25% taxes on profits upon withdrawal 1 year later</li>
+        <li><math><msub><mi>𝑖</mi><mn>2</mn></msub></math> = 8% yearly rate, 15% taxes on profits upon withdrawal 5 years later</li>
+        <li><math><msub><mi>𝑖</mi><mn>3</mn></msub></math> = 7% yearly rate, 0% taxes and withdrawal 3 years later</li>
+      </ul>
+      <p>If we want to maximize earnings over 10 years, should we purchase <math><msub><mi>𝑖</mi><mn>1</mn></msub></math> ten times, <math><msub><mi>𝑖</mi><mn>2</mn></msub></math> twice, <math><msub><mi>𝑖</mi><mn>3</mn></msub></math> three times and one <math><msub><mi>𝑖</mi><mn>1</mn></msub></math>, <math><msub><mi>𝑖</mi><mn>3</mn></msub></math> once and <math><msub><mi>𝑖</mi><mn>2</mn></msub></math> once and <math><msub><mi>𝑖</mi><mn>1</mn></msub></math> twice or some other combination?</p>
+      <p>Before we go into programming, let’s do some basic math/algorithms. This is all simple math, so don’t worry. You can also skip to <strong>programming</strong> if you prefer.</p>
+      <p><strong>Theorem 1</strong>: The final value to withdraw with any investment i such as the ones exemplified can be written as product of the initial value and a factor defined by the investment i, <math><mi>𝑒</mi><mrow><mo>(</mo><mi>𝑖</mi><mo>)</mo></mrow><mo>=</mo><mn>1</mn><mo>+</mo><mrow><mo>(</mo><mrow><mn>1</mn><mo>−</mo><mtext>taxes</mtext></mrow><mo>)</mo></mrow><mrow><mo>(</mo><mrow><msup><mrow><mo>(</mo><mrow><mn>1</mn><mo>+</mo><mtext>yearlyRate</mtext></mrow><mo>)</mo></mrow><mtext>time</mtext></msup><mo>−</mo><mn>1</mn></mrow><mo>)</mo></mrow></math></p>
+      <p><strong>Proof</strong>: Given some initial value v and composite yearly interest rates r, investment time t and taxes on profits taxes:</p>
+      <math display="block">
+        <mtext>profitsBeforeTaxes</mtext>
+        <mo>=</mo>
+        <mi>𝑣</mi>
+        <msup>
+          <mrow>
+            <mo>(</mo>
+            <mrow>
+              <mn>1</mn>
+              <mo>+</mo>
+              <mi>𝑟</mi>
+            </mrow>
+            <mo>)</mo>
+          </mrow>
+          <mi>𝑡</mi>
+        </msup>
+        <mo>−</mo>
+        <mi>𝑣</mi>
+        <mo>=</mo>
+        <mi>𝑣</mi>
+        <mrow>
+          <mo>(</mo>
+          <mrow>
+            <msup>
+              <mrow>
+                <mo>(</mo>
+                <mrow>
+                  <mn>1</mn>
+                  <mo>+</mo>
+                  <mi>𝑟</mi>
+                </mrow>
+                <mo>)</mo>
+              </mrow>
+              <mi>𝑡</mi>
+            </msup>
+            <mo>−</mo>
+            <mn>1</mn>
+          </mrow>
+          <mo>)</mo>
+        </mrow>
+      </math>
+      <math display="block">
+        <mtext>profitsAfterTaxes</mtext>
+        <mo>=</mo>
+        <mtext>profitsBeforeTaxes</mtext>
+        <mspace width="0.2222em"/>
+        <mrow>
+          <mo>(</mo>
+          <mrow>
+            <mn>1</mn>
+            <mo>−</mo>
+            <mtext>taxes</mtext>
+          </mrow>
+          <mo>)</mo>
+        </mrow>
+      </math>
+      <math display="block">
+        <mtext>profitsAfterTaxes</mtext>
+        <mo>=</mo>
+        <mi>𝑣</mi>
+        <mrow>
+          <mo>(</mo>
+          <mrow>
+            <msup>
+              <mrow>
+                <mo>(</mo>
+                <mrow>
+                  <mn>1</mn>
+                  <mo>+</mo>
+                  <mi>𝑟</mi>
+                </mrow>
+                <mo>)</mo>
+              </mrow>
+              <mi>𝑡</mi>
+            </msup>
+            <mo>−</mo>
+            <mn>1</mn>
+          </mrow>
+          <mo>)</mo>
+        </mrow>
+        <mrow>
+          <mo>(</mo>
+          <mrow>
+            <mn>1</mn>
+            <mo>−</mo>
+            <mtext>taxes</mtext>
+          </mrow>
+          <mo>)</mo>
+        </mrow>
+      </math>
+      <math display="block">
+        <mtext>finalValue</mtext>
+        <mo>=</mo>
+        <mi>𝑣</mi>
+        <mo>+</mo>
+        <mtext>profitsAfterTaxes</mtext>
+        <mo>=</mo>
+        <mi>𝑣</mi>
+        <mo>+</mo>
+        <mi>𝑣</mi>
+        <mrow>
+          <mo>(</mo>
+          <mrow>
+            <msup>
+              <mrow>
+                <mo>(</mo>
+                <mrow>
+                  <mn>1</mn>
+                  <mo>+</mo>
+                  <mi>𝑟</mi>
+                </mrow>
+                <mo>)</mo>
+              </mrow>
+              <mi>𝑡</mi>
+            </msup>
+            <mo>−</mo>
+            <mn>1</mn>
+          </mrow>
+          <mo>)</mo>
+        </mrow>
+        <mrow>
+          <mo>(</mo>
+          <mrow>
+            <mn>1</mn>
+            <mo>−</mo>
+            <mtext>taxes</mtext>
+          </mrow>
+          <mo>)</mo>
+        </mrow>
+      </math>
+      <math display="block">
+        <mtext>finalValue</mtext>
+        <mo>=</mo>
+        <mi>𝑣</mi>
+        <mrow>
+          <mo>(</mo>
+          <mrow>
+            <mn>1</mn>
+            <mo>+</mo>
+            <mrow>
+              <mo>(</mo>
+              <mrow>
+                <msup>
+                  <mrow>
+                    <mo>(</mo>
+                    <mrow>
+                      <mn>1</mn>
+                      <mo>+</mo>
+                      <mi>𝑟</mi>
+                    </mrow>
+                    <mo>)</mo>
+                  </mrow>
+                  <mi>𝑡</mi>
+                </msup>
+                <mo>−</mo>
+                <mn>1</mn>
+              </mrow>
+              <mo>)</mo>
+            </mrow>
+            <mrow>
+              <mo>(</mo>
+              <mrow>
+                <mn>1</mn>
+                <mo>−</mo>
+                <mtext>taxes</mtext>
+              </mrow>
+              <mo>)</mo>
+            </mrow>
+          </mrow>
+          <mo>)</mo>
+        </mrow>
+      </math>
+      <p>The previous line proves the existence of the factor. Now, since <math><mtext>finalValue</mtext><mo>=</mo><mi>𝑣</mi><mo lspace="0.2222222222222222em" rspace="0.2222222222222222em">⋅</mo><mi>𝑒</mi><mrow><mo>(</mo><mi>𝑖</mi><mo>)</mo></mrow></math>:</p>
+      <math display="block">
+        <mi>𝑒</mi>
+        <mrow>
+          <mo>(</mo>
+          <mi>𝑖</mi>
+          <mo>)</mo>
+        </mrow>
+        <mo>=</mo>
+        <mfrac>
+          <mtext>finalValue</mtext>
+          <mi>𝑣</mi>
+        </mfrac>
+        <mo>=</mo>
+        <mn>1</mn>
+        <mo>+</mo>
+        <mrow>
+          <mo>(</mo>
+          <mrow>
+            <mn>1</mn>
+            <mo>−</mo>
+            <mtext>taxes</mtext>
+          </mrow>
+          <mo>)</mo>
+        </mrow>
+        <mrow>
+          <mo>(</mo>
+          <mrow>
+            <msup>
+              <mrow>
+                <mo>(</mo>
+                <mrow>
+                  <mn>1</mn>
+                  <mo>+</mo>
+                  <mi>𝑟</mi>
+                </mrow>
+                <mo>)</mo>
+              </mrow>
+              <mi>𝑡</mi>
+            </msup>
+            <mo>−</mo>
+            <mn>1</mn>
+          </mrow>
+          <mo>)</mo>
+        </mrow>
+      </math>
+      <p><strong>Theorem 2</strong>: Given a set of possible investments and a deadline <math><mi>𝑛</mi></math>, the best investment strategy <math><msub><mi>𝑠</mi><mi>𝑛</mi></msub><mo>=</mo><mi>𝑒</mi><mrow><mo>(</mo><msub><mi>𝑖</mi><mn>1</mn></msub><mo>)</mo></mrow><mo lspace="0.2222222222222222em" rspace="0.2222222222222222em">⋅</mo><mi>𝑒</mi><mrow><mo>(</mo><msub><mi>𝑖</mi><mn>2</mn></msub><mo>)</mo></mrow><mo lspace="0.2222222222222222em" rspace="0.2222222222222222em">⋅</mo><mi>…</mi><mo lspace="0.2222222222222222em" rspace="0.2222222222222222em">⋅</mo><mi>𝑒</mi><mrow><mo>(</mo><msub><mi>𝑖</mi><mi>𝑗</mi></msub><mo>)</mo></mrow></math>, any sub-strategy contained in <math><msub><mi>𝑠</mi><mi>𝑛</mi></msub></math> is the best strategy for the sum of the times of the investments contained in it.</p>
+      <p><strong>Proof</strong>: Without loss of generality, let us consider <math><msub><mi>𝑠</mi><mi>𝑛</mi></msub><mo>=</mo><msub><mi>𝑠</mi><mi>𝑎</mi></msub><mo lspace="0.2222222222222222em" rspace="0.2222222222222222em">⋅</mo><msub><mi>𝑠</mi><mi>𝑏</mi></msub></math>, with <math><mi>𝑎</mi><mo>+</mo><mi>𝑏</mi><mo>=</mo><mi>𝑛</mi></math> and <math><mn>0</mn><mo>&lt;</mo><mi>𝑎</mi><mo>&lt;</mo><mi>𝑛</mi></math> and assume the contrary: <math><msub><mi>𝑠</mi><mi>𝑎</mi></msub></math> is not the best strategy for time <math><mi>𝑎</mi></math>, but <math><msub><mi>𝑠</mi><mi>𝑛</mi></msub></math> is the best strategy for time <math><mi>𝑛</mi></math>. So there must be <math><msubsup><mi>𝑠</mi><mi>𝑎</mi><mo>′</mo></msubsup><mo>></mo><msub><mi>𝑠</mi><mi>𝑎</mi></msub></math>, and that would mean <math><msubsup><mi>𝑠</mi><mi>𝑛</mi><mo>′</mo></msubsup><mo>=</mo><msubsup><mi>𝑠</mi><mi>𝑎</mi><mo>′</mo></msubsup><mo lspace="0.2222222222222222em" rspace="0.2222222222222222em">⋅</mo><msub><mi>𝑠</mi><mi>𝑏</mi></msub><mo>></mo><msub><mi>𝑠</mi><mi>𝑛</mi></msub></math>, which contradicts <math><msub><mi>𝑠</mi><mi>𝑛</mi></msub></math> being the best strategy. Therefore, there can be no <math><msubsup><mi>𝑠</mi><mi>𝑎</mi><mo>′</mo></msubsup><mo>></mo><msub><mi>𝑠</mi><mi>𝑎</mi></msub></math> and <math><msub><mi>𝑠</mi><mi>𝑎</mi></msub></math> is optimal.</p>
+      <h3>Programming</h3>
+      <p>Maybe you skipped the last part, but don’t worry. I’ll just roll out the recursive solution to the problem. How do we describe the list of investments to be made that maximizes earnings after some time n?</p>
+      <math display="block">
+        <msub>
+          <mi>𝑠</mi>
+          <mn>0</mn>
+        </msub>
+        <mo>=</mo>
+        <mn>1</mn>
+      </math>
+      <math display="block">
+        <msub>
+          <mi>𝑠</mi>
+          <mi>𝑛</mi>
+        </msub>
+        <mo>=</mo>
+        <mo form="prefix" lspace="0em" rspace="0em">max</mo>
+        <mrow>
+          <mo>{</mo>
+          <mrow>
+            <msub>
+              <mi>𝑠</mi>
+              <mn>1</mn>
+            </msub>
+            <mo lspace="0.2222222222222222em" rspace="0.2222222222222222em">⋅</mo>
+            <msub>
+              <mi>𝑠</mi>
+              <mrow>
+                <mi>𝑛</mi>
+                <mo lspace="0em" rspace="0em">−</mo>
+                <mn>1</mn>
+              </mrow>
+            </msub>
+            <mo>,</mo>
+            <msub>
+              <mi>𝑠</mi>
+              <mn>2</mn>
+            </msub>
+            <mo lspace="0.2222222222222222em" rspace="0.2222222222222222em">⋅</mo>
+            <msub>
+              <mi>𝑠</mi>
+              <mrow>
+                <mi>𝑛</mi>
+                <mo lspace="0em" rspace="0em">−</mo>
+                <mn>2</mn>
+              </mrow>
+            </msub>
+            <mo>,</mo>
+            <mi>…</mi>
+            <mo>,</mo>
+            <msub>
+              <mi>𝑠</mi>
+              <mrow>
+                <mi>𝑛</mi>
+                <mo lspace="0em" rspace="0em">−</mo>
+                <mn>1</mn>
+              </mrow>
+            </msub>
+            <mo lspace="0.2222222222222222em" rspace="0.2222222222222222em">⋅</mo>
+            <msub>
+              <mi>𝑠</mi>
+              <mn>1</mn>
+            </msub>
+            <mo>,</mo>
+            <mi>𝑖</mi>
+          </mrow>
+          <mo>}</mo>
+        </mrow>
+        <mo>,</mo>
+        <mtext>with </mtext>
+        <mspace width="0.2222em"/>
+        <mi>𝑖</mi>
+        <mo>=</mo>
+        <mtext>investment with largest</mtext>
+        <mspace width="0.2222em"/>
+        <mi>𝑒</mi>
+        <mrow>
+          <mo>(</mo>
+          <mi>𝑖</mi>
+          <mo>)</mo>
+        </mrow>
+        <mspace width="0.2222em"/>
+        <mtext>of all possible investments of</mtext>
+        <mspace width="0.2222em"/>
+        <mtext>time</mtext>
+        <mo>=</mo>
+        <mi>𝑛</mi>
+      </math>
+      <p>This basically means we test every possible combination, which is not very smart, of course. The advantage of finding a recursive solution is that we can compute and store calculations for use later on. This is what we call memoization.</p>
+      <p>Also, we only need to check up to <math><msub><mi>𝑠</mi><mrow><mo>⌊</mo><mfrac><mi>𝑛</mi><mn>2</mn></mfrac><mo>⌋</mo></mrow></msub><mo lspace="0.2222222222222222em" rspace="0.2222222222222222em">⋅</mo><msub><mi>𝑠</mi><mrow><mi>𝑛</mi><mo lspace="0em" rspace="0em">−</mo><mrow><mo>⌊</mo><mfrac><mi>𝑛</mi><mn>2</mn></mfrac><mo>⌋</mo></mrow></mrow></msub></math>, since every other check is redundant.</p>
+      <p>How do we implement this? In a procedural language we could use an array of size n and fill it up with all solutions from 0 to n. In Haskell we generally don’t want to use mutable data structures nor do we want to specify the order of evaluation of things, so we must find another tool in the toolbox to do this; it turns out that lazy evaluation is just that!</p>
+      <p>Lazy evaluation is, roughly speaking, a mechanism by which a value is only computed when required by some function. This means that we can define a data structure in terms of itself, and that it can even be infinite. Take the following example:</p>
+      <pre><code data-lang="haskell"><span style="color: #4b69c6">repeat</span> <span style="color: #d73948">::</span> a <span style="color: #d73948">-></span> [a]
+repeat x <span style="color: #d73948">=</span> x <span style="color: #d73948">:</span> repeat x</code></pre>
+      <p>What happens here is that the function repeat takes an object of some type a and returns a possibly infinite list of a. The list will grow in size as more elements of it are demanded by evaluation. Let us take this idea to implement our bestStrategyFunctionBad:</p>
+      <pre><code data-lang="haskell"><span style="color: #74747c">--</span><span style="color: #74747c"> We use the "investment" below to make sure the algorithm always returns some strategy, even if it means leaving your money in the bank</span>
+<span style="color: #4b69c6">investmentLeaveInTheBank</span> <span style="color: #d73948">::</span> <span style="color: #d73948">Investment</span>
+investmentLeaveInTheBank <span style="color: #d73948">=</span> <span style="color: #b60157">Investment</span> { name <span style="color: #d73948">=</span> <span style="color: #198810">"</span><span style="color: #198810">Leave it in the bank account</span><span style="color: #198810">"</span>, rate <span style="color: #d73948">=</span> <span style="color: #b60157">0</span>, taxes <span style="color: #d73948">=</span> <span style="color: #b60157">0</span><span style="color: #b60157">.</span><span style="color: #b60157">0</span>, time <span style="color: #d73948">=</span> <span style="color: #b60157">1</span> }
+
+<span style="color: #4b69c6">withMax</span> <span style="color: #d73948">::</span> <span style="color: #d73948">Ord</span> a <span style="color: #d73948">=></span> (b <span style="color: #d73948">-></span> a) <span style="color: #d73948">-></span> [b] <span style="color: #d73948">-></span> <span style="color: #d73948">Maybe</span> b
+withMax f xs <span style="color: #d73948">=</span> snd maybeRes
+  <span style="color: #d73948">where</span> maybeRes <span style="color: #d73948">=</span> foldl' (<span style="color: #d73948">\</span>acc el <span style="color: #d73948">-></span><span style="color: #d73948">case</span> acc <span style="color: #d73948">of</span>
+    <span style="color: #b60157">Just</span> (maxVal, maxEl) <span style="color: #d73948">-></span> <span style="color: #d73948">let</span> cmp <span style="color: #d73948">=</span> f el <span style="color: #d73948">in</span> <span style="color: #d73948">if</span> cmp <span style="color: #d73948">></span> maxVal <span style="color: #d73948">then</span> <span style="color: #b60157">Just</span> (cmp, el) <span style="color: #d73948">else</span> acc
+    <span style="color: #b60157">Nothing</span> <span style="color: #d73948">-></span> <span style="color: #b60157">Just</span> (f el, el)) <span style="color: #b60157">Nothing</span> xs
+
+<span style="color: #4b69c6">withMax1</span> <span style="color: #d73948">::</span> <span style="color: #d73948">Ord</span> a <span style="color: #d73948">=></span> (b <span style="color: #d73948">-></span> a) <span style="color: #d73948">-></span> b <span style="color: #d73948">-></span> [b] <span style="color: #d73948">-></span> b
+withMax1 f firstEl xs <span style="color: #d73948">=</span> snd <span style="color: #d73948">$</span> foldl' (<span style="color: #d73948">\</span>acc@(maxVal, _) el <span style="color: #d73948">-></span> <span style="color: #d73948">let</span> cmp <span style="color: #d73948">=</span> f el <span style="color: #d73948">in</span> <span style="color: #d73948">if</span> cmp <span style="color: #d73948">></span> maxVal <span style="color: #d73948">then</span> (cmp, el) <span style="color: #d73948">else</span> acc) (f firstEl, firstEl) xs
+
+<span style="color: #4b69c6">bestStrategyBad</span> <span style="color: #d73948">::</span> <span style="color: #d73948">Int</span> <span style="color: #d73948">-></span> [<span style="color: #d73948">Investment</span>] <span style="color: #d73948">-></span> [<span style="color: #d73948">Investment</span>]
+bestStrategyBad timeInYears invs' <span style="color: #d73948">=</span> go <span style="color: #d73948">!!</span> timeInYears
+  <span style="color: #d73948">where</span> invs <span style="color: #d73948">=</span> investmentLeaveInTheBank <span style="color: #d73948">:</span> invs'
+               factorStrategyBad is <span style="color: #d73948">=</span> product <span style="color: #d73948">$</span> fmap factorInvestment is
+               bestStrat desiredTime <span style="color: #d73948">=</span> withMax1 factorStrategyBad (maybeToList (bestInvestmentWithTime desiredTime)) (allCombinations desiredTime)
+               bestInvestmentWithTime desiredTime <span style="color: #d73948">=</span> withMax factorInvestment <span style="color: #d73948">$</span> filter (<span style="color: #d73948">\</span>i <span style="color: #d73948">-></span> time i <span style="color: #d73948">==</span> desiredTime) invs
+               <span style="color: #74747c">--</span><span style="color: #74747c"> For desiredTime=7 "allCombinations" returns strategies e1 ++ e6, e2 ++ e5 and e3 ++ e4</span>
+               allCombinations desiredTime <span style="color: #d73948">=</span> <span style="color: #d73948">let</span> halfTheTime <span style="color: #d73948">=</span> floor (fromIntegral desiredTime <span style="color: #d73948">/</span> <span style="color: #b60157">2</span>)
+                                             <span style="color: #d73948">in</span> fmap (<span style="color: #d73948">\</span>i <span style="color: #d73948">-></span> go <span style="color: #d73948">!!</span> i <span style="color: #d73948">++</span> go <span style="color: #d73948">!!</span> (desiredTime <span style="color: #d73948">-</span> i)) [<span style="color: #b60157">1</span><span style="color: #d73948">..</span>halfTheTime]
+               <span style="color: #4b69c6">go</span> <span style="color: #d73948">::</span> [[<span style="color: #d73948">Investment</span>]]
+               go <span style="color: #d73948">=</span> <span style="color: #d73948">[]</span> <span style="color: #d73948">:</span> fmap bestStrat [<span style="color: #b60157">1</span><span style="color: #d73948">..</span>]</code></pre>
+      <p>There is nothing magical about the code above. When demanding <code>go !! 20</code>, for instance, the function bestStrat will be called with the value <math><mn>20</mn></math>, which will demand all possible strategy investments (as defined by our equations). Demanding all combinations will once again require <code>go !! 19</code>, <code>go !! 18</code> and many others, which will repeat the process for a smaller <math><mi>𝑛</mi></math> (the fact that they are smaller is crucial for our recursion to converge).</p>
+      <p>What is different from recursion in imperative languages is that go is not a function: it is a list whose values are lazily calculated. As values are demanded from it, they are calculated only once, so you don’t have to worry about what order to evaluate things in. In C# this is sort of like a <code>List&lt;Lazy&lt;Investment[]>></code>.</p>
+      <p>This is nice! Still, there are two bad things about this solution:</p>
+      <ol>
+        <li><code>go</code> is a list, so accessing <code>go !! n</code> is <math><mi>𝑂</mi><mrow><mo>(</mo><mi>𝑛</mi><mo>)</mo></mrow></math>. If this were an array this would be better. We will not tackle this issue for now, but feel free to do so!</li>
+        <li>We are creating a large number of lists with the <code>(++)</code> function, not to mention that once we combine two strategies we have to go through every investment in the combined strategy to calculate its complete factor, when we could do better.</li>
+      </ol>
+      <p>So now let’s go and solve issue number 2.</p>
+      <h3>More lazy evaluation and a little abstraction</h3>
+      <p>So, how can we solve issue number 2? Combining two strategies leads to a strategy with a factor that is the product of the factors of each strategy. There is no need to concatenate lists to discover the best strategy of some given size. To avoid needless work, we need more lazy evaluation. Let’s add some functions to our code and create the <code>bestStrategyGood</code> function:</p>
+      <pre><code data-lang="haskell"><span style="color: #d73948">data</span> <span style="color: #b60157">StrategyCalc</span> <span style="color: #d73948">=</span> <span style="color: #b60157">StrategyCalc</span> [<span style="color: #b60157">Investment</span>] <span style="color: #b60157">Double</span>
+
+factorStrategyGood (<span style="color: #b60157">StrategyCalc</span> _ x) <span style="color: #d73948">=</span> x
+
+<span style="color: #4b69c6">combine</span> <span style="color: #d73948">::</span> <span style="color: #d73948">StrategyCalc</span> <span style="color: #d73948">-></span> <span style="color: #d73948">StrategyCalc</span> <span style="color: #d73948">-></span> <span style="color: #d73948">StrategyCalc</span>
+combine (<span style="color: #b60157">StrategyCalc</span> s1 f1) (<span style="color: #b60157">StrategyCalc</span> s2 f2) <span style="color: #d73948">=</span> <span style="color: #b60157">StrategyCalc</span> (s1 <span style="color: #d73948">++</span> s2) (f1 * f2)
+
+<span style="color: #4b69c6">bestStrategyGood</span> <span style="color: #d73948">::</span> <span style="color: #d73948">Int</span> <span style="color: #d73948">-></span> [<span style="color: #d73948">Investment</span>] <span style="color: #d73948">-></span> [<span style="color: #d73948">Investment</span>]
+bestStrategyGood timeInYears invs' <span style="color: #d73948">=</span> <span style="color: #d73948">let</span> <span style="color: #b60157">StrategyCalc</span> res _ <span style="color: #d73948">=</span> go <span style="color: #d73948">!!</span> timeInYears <span style="color: #d73948">in</span> res
+  <span style="color: #d73948">where</span> invs <span style="color: #d73948">=</span> investmentLeaveInTheBank <span style="color: #d73948">:</span> invs'
+               bestStrat desiredTime <span style="color: #d73948">=</span> withMax1 factorStrategyGood (bestInvestmentWithTimeOr1 desiredTime) (allCombinations desiredTime)
+               bestInvestmentWithTimeOr1 desiredTime <span style="color: #d73948">=</span> <span style="color: #d73948">case</span> withMax factorInvestment <span style="color: #d73948">$</span> filter (<span style="color: #d73948">\</span>i <span style="color: #d73948">-></span> time i <span style="color: #d73948">==</span> desiredTime) invs <span style="color: #d73948">of</span>
+                                                         <span style="color: #b60157">Nothing</span> <span style="color: #d73948">-></span> <span style="color: #b60157">StrategyCalc</span> <span style="color: #d73948">[]</span> <span style="color: #b60157">1</span>
+                                                         <span style="color: #b60157">Just</span> i <span style="color: #d73948">-></span> <span style="color: #b60157">StrategyCalc</span> [i] (factorInvestment i)
+               <span style="color: #74747c">--</span><span style="color: #74747c"> For desiredTime=7 "allCombinations" returns strategies e1 ++ e6, e2 ++ e5 and e3 ++ e4</span>
+               allCombinations desiredTime <span style="color: #d73948">=</span> <span style="color: #d73948">let</span> halfTheTime <span style="color: #d73948">=</span> floor (fromIntegral desiredTime <span style="color: #d73948">/</span> <span style="color: #b60157">2</span>)
+                                             <span style="color: #d73948">in</span> fmap (<span style="color: #d73948">\</span>i <span style="color: #d73948">-></span> combine (go <span style="color: #d73948">!!</span> i) (go <span style="color: #d73948">!!</span> (desiredTime <span style="color: #d73948">-</span> i))) [<span style="color: #b60157">1</span><span style="color: #d73948">..</span>halfTheTime]
+               <span style="color: #4b69c6">go</span> <span style="color: #d73948">::</span> [<span style="color: #d73948">StrategyCalc</span>]
+               go <span style="color: #d73948">=</span> <span style="color: #b60157">StrategyCalc</span> <span style="color: #d73948">[]</span> <span style="color: #b60157">1</span> <span style="color: #d73948">:</span> fmap bestStrat [<span style="color: #b60157">1</span><span style="color: #d73948">..</span>]</code></pre>
+      <p>Take your time to digest this: the list of investments in each <code>StrategyCalc</code> will only be evaluated when the caller needs it to be evaluated. However, the combine function will create a <code>StrategyCalc</code> whose factor is calculated in constant time when combining two strategies. In fact, you could even have the final factor of the optimal strategy without having ever constructed a non empty list. Nice!</p>
+      <h3>A little abstraction (skip to results if you prefer)</h3>
+      <p>I thought a nice touch to finish this article would be to introduce an abstraction: the Monoid.</p>
+      <p>A Monoid is just a fancy name for a binary operation that is associative and a value that is an identity for this operation. The Int type, the sum function (+) and the value <math><mn>0</mn></math> (zero) form an instance of Monoid, for instance, since any number plus zero equals itself and <math><mrow><mo>(</mo><mrow><mi>𝑎</mi><mo>+</mo><mi>𝑏</mi></mrow><mo>)</mo></mrow><mo>+</mo><mi>𝑐</mi><mo>=</mo><mi>𝑎</mi><mo>+</mo><mrow><mo>(</mo><mrow><mi>𝑏</mi><mo>+</mo><mi>𝑐</mi></mrow><mo>)</mo></mrow></math> for any <math><mi>𝑎</mi><mo>,</mo><mi>𝑏</mi><mo>,</mo><mi>𝑐</mi></math> of type Int.</p>
+      <p>The same thing happens with investment strategies! So we can replace the combine function by the Monoidal append:</p>
+      <pre><code data-lang="haskell"><span style="color: #d73948">instance</span> <span style="color: #d73948">Monoid</span> <span style="color: #d73948">StrategyCalc</span> <span style="color: #d73948">where</span>
+  mempty <span style="color: #d73948">=</span> <span style="color: #b60157">StrategyCalc</span> <span style="color: #d73948">[]</span> <span style="color: #b60157">1</span>
+  mappend (<span style="color: #b60157">StrategyCalc</span> i1 f1) (<span style="color: #b60157">StrategyCalc</span> i2 f2) <span style="color: #d73948">=</span> <span style="color: #b60157">StrategyCalc</span> (i1 <span style="color: #d73948">++</span> i2) (f1 * f2)</code></pre>
+      <p>Don’t forget that <code>&lt;></code> is an infix alias for mappend!</p>
+      <h3>Results</h3>
+      <p>When taking the code for bestStrategyGood and the three investments from the beginning of the article, let us devise the best strategy to maximize gains over the next 11 years:</p>
+      <pre><code>$ ghci
+$ :l Investments.hs
+ghci> let availableInvestments = [ Investment { name = "Investment 1", rate = 0.09, taxes = 0.25, time = 1 }
+                                 , Investment { name = "Investment 2", rate = 0.08, taxes = 0.15, time = 5 }
+                                 , Investment { name = "Investment 3", rate = 0.07, taxes = 0, time = 3 } ]
+ghci> fmap name $ bestStrategyGood 11 availableInvestments
+["Investment 3","Investment 3","Investment 2"]</code></pre>
+      <p>So it seems that buying investment 3, rebuying it and then buying investment 2 is the best strategy in this case.</p>
+      <p>That’s it! I hope you liked it, and if it helps, do know that this problem is still solvable with the same algorithm if the tax of each investment is a function of the amount of time since the investment title was purchased and if the time until withdrawal is either an exact time or a minimum time. It is also possible to include inflation-correcting investments if you pass around some estimated inflation; all of this with only minor modifications. Also, feel free to change the time unit to months and get something much more precise for your investments!</p>
+    </main>
+  </body>
+</html>

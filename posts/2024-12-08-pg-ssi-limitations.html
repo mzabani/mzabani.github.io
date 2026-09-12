@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Marcelo Zabani's Blog - Limitations of SSI's implementation in PostgreSQL</title>
+    <style>
+      /* Alignment */
+      mtable.right-align mtd,
+      mtable mtd.right-align,
+      mtable.left-align mtd.right-align,
+      mtable.aligned mtd:nth-child(odd) {
+        justify-items: end;
+        text-align: right;
+      }
+      mtable.cases mtd,
+      mtable.left-align mtd,
+      mtable mtd.left-align,
+      mtable.aligned mtd:nth-child(even),
+      math:is(:not([display])) > mtable.multiline-equation mtd {
+        justify-items: start;
+        text-align: left;
+      }
+      mtable.cases mtd,
+      mtable.aligned mtd,
+      mtable mtd.flushed,
+      mtable mtd.left-flush {
+        padding-left: 0;
+      }
+      mtable.cases mtd,
+      mtable.aligned mtd,
+      mtable mtd.flushed,
+      mtable mtd.right-flush {
+        padding-right: 0;
+      }
+      
+      /* Tables */
+      mtable {
+        math-style: inherit;
+      }
+      mtd {
+        math-depth: auto-add;
+        math-style: compact;
+        math-shift: compact;
+      }
+      
+      /* Equations */
+      mtable.multiline-equation mtd {
+        math-depth: inherit;
+        math-style: inherit;
+        math-shift: inherit;
+        padding: 0;
+      }
+      math > mtable.multiline-equation mtr:not(:last-child) mtd {
+        padding-bottom: 0.5em;
+      }
+      
+      /* Fractions */
+      mfrac {
+        padding-inline: 0;
+        margin-inline: 0.1em;
+      }
+      
+      /* Accents */
+      mover[accent="true" i] > :first-child {
+        font-feature-settings: "dtls";
+      }
+      mover.dotted[accent="true" i] > :first-child {
+        font-feature-settings: "dtls" 0;
+      }
+      
+      /* Other rules for scriptlevel, displaystyle and math-shift */
+      munder > :nth-child(2),
+      munderover > :nth-child(2) {
+        math-shift: compact
+      }
+      munder[accentunder="true" i] > :not(:first-child),
+      mover[accent="true" i] > :not(:first-child) {
+        math-depth: inherit;
+        math-style: inherit;
+        math-shift: inherit;
+      }
+    </style>
+  </head>
+  <body>
+    <style>
+      
+      :root {
+        color-scheme: light dark;
+        --bg: #ffffff;
+        --fg: #1a1a1a;
+        --muted: #666666;
+        --border: #dddddd;
+        --code-bg: #f5f5f5;
+        --link: #0056b3;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #16181c;
+          --fg: #e6e6e6;
+          --muted: #9a9a9a;
+          --border: #3a3d42;
+          --code-bg: #1f2226;
+          --link: #6cb2ff;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        background: var(--bg);
+        color: var(--fg);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+        line-height: 1.6;
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 0 1.25rem;
+      }
+      a { color: var(--link); }
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        border-bottom: 2px solid var(--fg);
+        margin-bottom: 2rem;
+        padding: 1rem 0;
+      }
+      header .logo a { font-weight: bold; font-size: 1.1rem; text-decoration: none; color: var(--fg); }
+      header nav a { margin-left: 1rem; text-decoration: none; font-weight: bold; text-transform: uppercase; font-size: 0.9rem; color: var(--fg); }
+      h1 { font-size: 1.6rem; margin-bottom: 0.25rem; }
+      h2 { font-size: 1.3rem; margin-top: 2rem; }
+      h3 { font-size: 1.1rem; }
+      .info { color: var(--muted); font-size: 0.85rem; font-style: italic; margin-bottom: 1.5rem; }
+      pre {
+        background: var(--code-bg);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 0.75rem 1rem;
+        overflow-x: auto;
+        font-size: 0.85rem;
+      }
+      code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+      p code, li code { background: var(--code-bg); padding: 0.1em 0.3em; border-radius: 4px; }
+      table { border-collapse: collapse; margin: 1.5rem 0; width: 100%; }
+      table, th, td { border: 1px solid var(--border); }
+      th, td { padding: 0.5rem 0.75rem; text-align: left; vertical-align: top; }
+      ul#post-list li { margin-bottom: 0.5rem; }
+      footer {
+        border-top: 2px solid var(--border);
+        color: var(--muted);
+        font-size: 0.8rem;
+        margin-top: 3rem;
+        padding: 1rem 0;
+        text-align: right;
+      }
+      section[role="doc-endnotes"] { border-top: 1px solid var(--border); margin-top: 2rem; padding-top: 0.5rem; font-size: 0.9rem; color: var(--muted); }
+    </style>
+    <header>
+      <span class="logo"><a href="../index.html">Marcelo Zabani’s Blog</a></span>
+      <nav><a href="../index.html">Home</a></nav>
+    </header>
+    <main>
+      <h1>Limitations of SSI's implementation in PostgreSQL</h1>
+      <div class="info">Posted on December 8, 2024</div>
+      <p>In the <a href="2024-11-20-pg-what-serializable-isolation-really-means.html">previous article</a> I covered why Serializable transactions are great for a more worry-free development of concurrent applications. Now we’re going to cover some details of how it’s implemented in postgresql so we understand some of its limitations. Essentially this post is about false-positive detection of serialization anomalies.</p>
+      <p>Let’s create a test table with a large number of rows first, the smallest Id being 1000 and the largest being 1000000:</p>
+      <pre><code data-lang="sql"><span style="color: #d73948">CREATE</span> <span style="color: #d73948">TABLE</span> <span style="color: #4b69c6">test_table</span> (id <span style="color: #d73948">SERIAL</span> <span style="color: #d73948">PRIMARY KEY</span>, name <span style="color: #d73948">TEXT</span>);
+<span style="color: #d73948">WITH</span> q(num) <span style="color: #d73948">AS</span> (<span style="color: #d73948">SELECT</span> <span style="color: #d73948">*</span> <span style="color: #d73948">FROM</span> generate_series(<span style="color: #b60157">1000</span>,<span style="color: #b60157">1000000</span>)) <span style="color: #d73948">INSERT INTO</span> test_table (id, name) <span style="color: #d73948">SELECT</span> num, <span style="color: #198810">'</span><span style="color: #198810">anything</span><span style="color: #198810">'</span> <span style="color: #d73948">FROM</span> q;
+<span style="color: #d73948">SELECT</span> <span style="color: #4b69c6">min</span>(id), <span style="color: #4b69c6">max</span>(id) <span style="color: #d73948">FROM</span> test_table;</code></pre>
+      <p>Let’s start with two concurrent transactions whose concurrent execution is serializable, so postgres should let them commit. Scroll further down below to look at the SQL we will execute as you read the bullet points below:</p>
+      <ul>
+        <li>The transaction to the left (henceforth called left-txn) looks for a row with id=5 and right-txn doesn’t insert such a row.</li>
+        <li>Right-txn looks for a row with id=1000001 and doesn’t find one, but left-txn does insert a row with that Id.</li>
+        <li>Right-txn inserts a row with Id 1000002, but left-txn is not / would not be affected by that in the slightest.</li>
+      </ul>
+      <p>The execution is serializable because the final results are the same as if right-txn had committed before left-txn started (but postgres will let you commit any one of them before the other).</p>
+      <p>To try this experiment, open two separate <code>psql</code> instances, and run each command in the order they’re laid out vertically below in each separate instance:</p>
+      <pre><code data-lang="sql"><span style="color: #d73948">BEGIN</span> ISOLATION LEVEL SERIALIZABLE;
+
+                                                                        <span style="color: #d73948">BEGIN</span> ISOLATION LEVEL SERIALIZABLE;
+
+<span style="color: #d73948">SELECT</span> <span style="color: #d73948">*</span> <span style="color: #d73948">FROM</span> test_table <span style="color: #d73948">WHERE</span> id<span style="color: #d73948">=</span><span style="color: #b60157">5</span>;
+<span style="color: #74747c">--</span><span style="color: #74747c"> 0 results</span>
+
+                                                                        <span style="color: #d73948">SELECT</span> <span style="color: #d73948">*</span> <span style="color: #d73948">FROM</span> test_table <span style="color: #d73948">WHERE</span> id<span style="color: #d73948">=</span><span style="color: #b60157">1000001</span>;
+                                                                        <span style="color: #74747c">--</span><span style="color: #74747c"> 0 results</span>
+
+<span style="color: #d73948">INSERT INTO</span> test_table (id, name) <span style="color: #d73948">VALUES</span> (<span style="color: #b60157">1000001</span>, <span style="color: #198810">'</span><span style="color: #198810">something</span><span style="color: #198810">'</span>);
+<span style="color: #74747c">--</span><span style="color: #74747c"> INSERT 0 1</span>
+
+                                                                        <span style="color: #d73948">INSERT INTO</span> test_table (id, name) <span style="color: #d73948">VALUES</span> (<span style="color: #b60157">1000002</span>, <span style="color: #198810">'</span><span style="color: #198810">something</span><span style="color: #198810">'</span>);
+                                                                        <span style="color: #74747c">--</span><span style="color: #74747c"> INSERT 0 1</span>
+
+                                                                        <span style="color: #d73948">COMMIT</span>; <span style="color: #74747c">--</span><span style="color: #74747c"> all good</span>
+
+<span style="color: #d73948">COMMIT</span>; <span style="color: #74747c">--</span><span style="color: #74747c"> all good, and you could've committed this first as well</span></code></pre>
+      <p>For postgres to detect a serialization anomaly, there needs to be a cycle<sup id="loc-1" role="doc-noteref"><a href="#loc-2">1</a></sup> in rw-antidependencies (a rw-antidependency is when one transaction reads something whose results would be different due to another concurrent transaction modifying data). Since there are only two concurrent transactions and left-txn doesn’t read any data modified by right-txn, there can be no such cycle (notice there is a rw-antidependency from <em>right-txn -> left-txn</em> due to reading 0 results with <code>id=1000001</code>). What if repeat the transactions above but change the Ids so they’re closer to each other? Instead of 5, 1000001 and 1000002 let’s use 5, 4 and 200.</p>
+      <pre><code data-lang="sql"><span style="color: #d73948">DELETE</span> <span style="color: #d73948">FROM</span> test_table <span style="color: #d73948">WHERE</span> id<span style="color: #d73948">></span><span style="color: #b60157">1000000</span>; <span style="color: #74747c">--</span><span style="color: #74747c"> clean up</span>
+<span style="color: #d73948">BEGIN</span> ISOLATION LEVEL SERIALIZABLE;
+
+                                                                        <span style="color: #d73948">BEGIN</span> ISOLATION LEVEL SERIALIZABLE;
+
+<span style="color: #d73948">SELECT</span> <span style="color: #d73948">*</span> <span style="color: #d73948">FROM</span> test_table <span style="color: #d73948">WHERE</span> id<span style="color: #d73948">=</span><span style="color: #b60157">5</span>;
+<span style="color: #74747c">--</span><span style="color: #74747c"> 0 results</span>
+
+                                                                        <span style="color: #d73948">SELECT</span> <span style="color: #d73948">*</span> <span style="color: #d73948">FROM</span> test_table <span style="color: #d73948">WHERE</span> id<span style="color: #d73948">=</span><span style="color: #b60157">4</span>;
+                                                                        <span style="color: #74747c">--</span><span style="color: #74747c"> 0 results</span>
+
+<span style="color: #d73948">INSERT INTO</span> test_table (id, name) <span style="color: #d73948">VALUES</span> (<span style="color: #b60157">4</span>, <span style="color: #198810">'</span><span style="color: #198810">something</span><span style="color: #198810">'</span>);
+<span style="color: #74747c">--</span><span style="color: #74747c"> INSERT 0 1</span>
+
+                                                                        <span style="color: #d73948">INSERT INTO</span> test_table (id, name) <span style="color: #d73948">VALUES</span> (<span style="color: #b60157">200</span>, <span style="color: #198810">'</span><span style="color: #198810">something</span><span style="color: #198810">'</span>);
+                                                                        <span style="color: #74747c">--</span><span style="color: #74747c"> INSERT 0 1</span>
+
+                                                                        <span style="color: #d73948">COMMIT</span>; <span style="color: #74747c">--</span><span style="color: #74747c"> all good</span>
+
+<span style="color: #d73948">COMMIT</span>;
+ERROR:  could not serialize access due to read<span style="color: #1d6c76">/</span>write dependencies among transactions
+DETAIL:  Reason code: Canceled on identification <span style="color: #d73948">as</span> a pivot, during <span style="color: #d73948">commit</span> attempt.
+HINT:  The transaction might succeed if retried.</code></pre>
+      <p>We just replaced some Ids but it is still true that left-txn does not read any data modified by right-txn. So why does this fail? The answer is that postgres checks aren’t perfectly precise. There is a matter of granularity. Let’s look in more detail.</p>
+      <h2>Predicate locks</h2>
+      <p>Every time you read data from a table inside a serializable transaction, postgres creates one or more predicate locks internally. “Lock” is a bit of a misnomer because unlike locks we’re familiar with, these don’t block other transactions from reading nor writing to the same data. Let’s see what that means:</p>
+      <pre><code data-lang="sql"><span style="color: #d73948">BEGIN</span> ISOLATION LEVEL SERIALIZABLE;
+<span style="color: #d73948">SELECT</span> <span style="color: #4b69c6">COUNT</span>(<span style="color: #d73948">*</span>) <span style="color: #d73948">FROM</span> test_table;
+<span style="color: #d73948">SELECT</span> locktype, mode, relname, page, tuple <span style="color: #d73948">FROM</span> pg_locks <span style="color: #d73948">LEFT JOIN</span> pg_class ON relation<span style="color: #d73948">=</span><span style="color: #b60157">pg_class</span>.<span style="color: #b60157">oid</span> <span style="color: #d73948">WHERE</span> mode<span style="color: #d73948">=</span><span style="color: #198810">'</span><span style="color: #198810">SIReadLock</span><span style="color: #198810">'</span>;
+ locktype |    mode    |  relname   | page | tuple
+<span style="color: #74747c">--</span><span style="color: #74747c">--------+------------+------------+------+-------</span>
+ relation | SIReadLock | test_table |      |
+(<span style="color: #b60157">1</span> row)</code></pre>
+      <p>In <code>pg_locks</code> we can view predicate locks by checking for <code>mode=SIReadLock</code>. The one above is a <code>relation</code> predicate lock. It means our transaction read the contents of the entire table, so any concurrent transactions modifying any rows in the table will create a rw-antidependency from the writing transaction to our transaction above. Remember this is not sufficient to cancel one of the transactions: there needs to be a cycle for a serialization anomaly to happen, not just one rw-antidependency.</p>
+      <p>Let’s look at predicate locks for the two transactions we tried earlier where one of them failed. Right before the first <code>commit</code> statement, what do predicate locks look like?</p>
+      <pre><code data-lang="sql"><span style="color: #d73948">DELETE</span> <span style="color: #d73948">FROM</span> test_table <span style="color: #d73948">WHERE</span> id<span style="color: #d73948">=</span><span style="color: #b60157">200</span>; <span style="color: #74747c">--</span><span style="color: #74747c"> Cleanup before you try again</span>
+<span style="color: #74747c">--</span><span style="color: #74747c"> Now run both transactions again, but right before the first commit run:</span>
+<span style="color: #d73948">SELECT</span> locktype, mode, relname, page, tuple <span style="color: #d73948">FROM</span> pg_locks <span style="color: #d73948">LEFT JOIN</span> pg_class ON relation<span style="color: #d73948">=</span><span style="color: #b60157">pg_class</span>.<span style="color: #b60157">oid</span> <span style="color: #d73948">WHERE</span> mode<span style="color: #d73948">=</span><span style="color: #198810">'</span><span style="color: #198810">SIReadLock</span><span style="color: #198810">'</span>;
+ locktype |    mode    |     relname     | page | tuple
+<span style="color: #74747c">--</span><span style="color: #74747c">--------+------------+-----------------+------+-------</span>
+ page     | SIReadLock | test_table_pkey |    <span style="color: #b60157">1</span> |
+ page     | SIReadLock | test_table_pkey |    <span style="color: #b60157">1</span> |
+(<span style="color: #b60157">2</span> rows)</code></pre>
+      <p>Notice two very important things:</p>
+      <ul>
+        <li>The predicate locks are on the index, not the table.</li>
+        <li><code>tuple</code> is NULL. The predicate locks are on all of page 1.</li>
+      </ul>
+      <p>This means postgres doesn’t know left-txn only tried to read a row with <code>id=5</code> and right-txn only tried to read a row with <code>id=4</code>. Instead, it thinks any modifications to any rows that live within index page 1 could’ve affected the <code>SELECT</code> statements from both transactions. Because Ids 4,5, and 200 would all live in page 1, postgres thinks there are rw-antidependencies from both transactions to one another. This is clearly a false positive.</p>
+      <p>This is a problem of granularity. Sadly, while for tables there are tuple-level locks, for indexes the smallest granularity is a page. Which for a btree index of integers can include up to  367 entries according to the <a href="https://www.postgresql.org/docs/16/pageinspect.html#PAGEINSPECT-B-TREE-FUNCS">pageinspect</a> extension.</p>
+      <h2>Predicate lock promotion</h2>
+      <p>Suppose you select a few rows:</p>
+      <pre><code data-lang="sql">VACUUM (FULL) test_table;
+<span style="color: #d73948">BEGIN</span> ISOLATION LEVEL SERIALIZABLE;
+<span style="color: #d73948">SELECT</span> <span style="color: #4b69c6">COUNT</span>(<span style="color: #d73948">*</span>) <span style="color: #d73948">FROM</span> test_table <span style="color: #d73948">WHERE</span> id <span style="color: #d73948">BETWEEN</span> <span style="color: #b60157">10000</span> <span style="color: #d73948">AND</span> <span style="color: #b60157">10002</span>;</code></pre>
+      <p>If you query locks now, you will see 3 relation tuple-level predicate locks and one index page-level predicate lock. If you select just one more row - the one with Id 10003 - and query locks again, postgres will promote what would be 3 tuple-level locks to one page-level lock:</p>
+      <pre><code data-lang="sql"> locktype |    mode    |     relname     | pid  | page | tuple
+<span style="color: #74747c">--</span><span style="color: #74747c">--------+------------+-----------------+------+------+-------</span>
+ tuple    | SIReadLock | test_table      | <span style="color: #b60157">7683</span> | <span style="color: #b60157">5400</span> |    <span style="color: #b60157">23</span>
+ page     | SIReadLock | test_table      | <span style="color: #b60157">7683</span> |   <span style="color: #b60157">48</span> |
+ page     | SIReadLock | test_table_pkey | <span style="color: #b60157">7683</span> |   <span style="color: #b60157">26</span> |
+(<span style="color: #b60157">3</span> rows)</code></pre>
+      <p>According to pageinspect, for this table (which granted, has very few columns) one page contains 187 rows. That is, the granularity of our predicate locks went from 3 to 187 rows because of one more selected row. This might be fine for your workloads, but it’s not a very smooth transition.</p>
+      <p>This is configurable through the <a href="https://www.postgresql.org/docs/current/runtime-config-locks.html#GUC-MAX-PRED-LOCKS-PER-PAGE">max_pred_locks_per_page</a> setting, and there are more <code>max_pred_*</code> settings worth looking at because the default might be too low for your workloads.</p>
+      <p>There are other interesting things about SSI in postgres, though I’m not sure I’ll find the motivation to keep writing about them. HOT updates, predicate locks being replaced by “normal” locks on writes, and some things I still don’t understand like postgres being smarter than what <code>pg_locks</code> might make you think it could be.</p>
+      <h2>References</h2>
+      <ul>
+        <li><a href="https://github.com/postgres/postgres/blob/master/src/backend/storage/lmgr/README-SSI">README-SSI</a> in postgres’s codebase discusses the implementation and also has a very interesting “Several optimizations are possible” section.</li>
+        <li>Dan Ports’s and Kevin Grittner’s <a href="https://arxiv.org/pdf/1208.4179">SSI paper</a>.</li>
+        <li>pg-hackers <a href="https://www.postgresql.org/message-id/flat/CAEepm%3D2GK3FVdnt5V3d%2Bh9njWipCv_fNL%3DwjxyUhzsF%3D0PcbNg%40mail.gmail.com">discussion thread</a> of Thomas Munro’s unmerged patches with some improvements to postgres’ SSI implementation.</li>
+      </ul>
+    </main>
+    <section role="doc-endnotes">
+      <ol style="list-style-type: none">
+        <li id="loc-2"><sup role="doc-backlink"><a href="#loc-1">1</a></sup>Postgresql doesn’t really check for a cycle. Rather it checks for two adjacent rw-antidependencies in a directed graph where transactions are nodes and rw-antidependencies are edges, with the transaction at the end of the second edge being the first to commit. This can lead to false positives in exchange for being a cheaper check. See Chapter 3.3 in <a href="https://arxiv.org/pdf/1208.4179">the paper</a>.</li>
+      </ol>
+    </section>
+  </body>
+</html>

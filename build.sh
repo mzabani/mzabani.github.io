@@ -6,4 +6,4 @@ set -euo pipefail
 
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
-typst compile --features html,bundle -f bundle --pretty --root "$(pwd)" bundle.typ ./generated/
+typst compile --features html,bundle -f bundle --pretty --root "$(pwd)" bundle.typ ./

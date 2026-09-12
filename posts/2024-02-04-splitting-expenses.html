@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Marcelo Zabani's Blog - Algorithms to split group expenses</title>
+    <style>
+      /* Alignment */
+      mtable.right-align mtd,
+      mtable mtd.right-align,
+      mtable.left-align mtd.right-align,
+      mtable.aligned mtd:nth-child(odd) {
+        justify-items: end;
+        text-align: right;
+      }
+      mtable.cases mtd,
+      mtable.left-align mtd,
+      mtable mtd.left-align,
+      mtable.aligned mtd:nth-child(even),
+      math:is(:not([display])) > mtable.multiline-equation mtd {
+        justify-items: start;
+        text-align: left;
+      }
+      mtable.cases mtd,
+      mtable.aligned mtd,
+      mtable mtd.flushed,
+      mtable mtd.left-flush {
+        padding-left: 0;
+      }
+      mtable.cases mtd,
+      mtable.aligned mtd,
+      mtable mtd.flushed,
+      mtable mtd.right-flush {
+        padding-right: 0;
+      }
+      
+      /* Tables */
+      mtable {
+        math-style: inherit;
+      }
+      mtd {
+        math-depth: auto-add;
+        math-style: compact;
+        math-shift: compact;
+      }
+      
+      /* Equations */
+      mtable.multiline-equation mtd {
+        math-depth: inherit;
+        math-style: inherit;
+        math-shift: inherit;
+        padding: 0;
+      }
+      math > mtable.multiline-equation mtr:not(:last-child) mtd {
+        padding-bottom: 0.5em;
+      }
+      
+      /* Fractions */
+      mfrac {
+        padding-inline: 0;
+        margin-inline: 0.1em;
+      }
+      
+      /* Accents */
+      mover[accent="true" i] > :first-child {
+        font-feature-settings: "dtls";
+      }
+      mover.dotted[accent="true" i] > :first-child {
+        font-feature-settings: "dtls" 0;
+      }
+      
+      /* Other rules for scriptlevel, displaystyle and math-shift */
+      munder > :nth-child(2),
+      munderover > :nth-child(2) {
+        math-shift: compact
+      }
+      munder[accentunder="true" i] > :not(:first-child),
+      mover[accent="true" i] > :not(:first-child) {
+        math-depth: inherit;
+        math-style: inherit;
+        math-shift: inherit;
+      }
+    </style>
+  </head>
+  <body>
+    <style>
+      
+      :root {
+        color-scheme: light dark;
+        --bg: #ffffff;
+        --fg: #1a1a1a;
+        --muted: #666666;
+        --border: #dddddd;
+        --code-bg: #f5f5f5;
+        --link: #0056b3;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #16181c;
+          --fg: #e6e6e6;
+          --muted: #9a9a9a;
+          --border: #3a3d42;
+          --code-bg: #1f2226;
+          --link: #6cb2ff;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        background: var(--bg);
+        color: var(--fg);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+        line-height: 1.6;
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 0 1.25rem;
+      }
+      a { color: var(--link); }
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        border-bottom: 2px solid var(--fg);
+        margin-bottom: 2rem;
+        padding: 1rem 0;
+      }
+      header .logo a { font-weight: bold; font-size: 1.1rem; text-decoration: none; color: var(--fg); }
+      header nav a { margin-left: 1rem; text-decoration: none; font-weight: bold; text-transform: uppercase; font-size: 0.9rem; color: var(--fg); }
+      h1 { font-size: 1.6rem; margin-bottom: 0.25rem; }
+      h2 { font-size: 1.3rem; margin-top: 2rem; }
+      h3 { font-size: 1.1rem; }
+      .info { color: var(--muted); font-size: 0.85rem; font-style: italic; margin-bottom: 1.5rem; }
+      pre {
+        background: var(--code-bg);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 0.75rem 1rem;
+        overflow-x: auto;
+        font-size: 0.85rem;
+      }
+      code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+      p code, li code { background: var(--code-bg); padding: 0.1em 0.3em; border-radius: 4px; }
+      table { border-collapse: collapse; margin: 1.5rem 0; width: 100%; }
+      table, th, td { border: 1px solid var(--border); }
+      th, td { padding: 0.5rem 0.75rem; text-align: left; vertical-align: top; }
+      ul#post-list li { margin-bottom: 0.5rem; }
+      footer {
+        border-top: 2px solid var(--border);
+        color: var(--muted);
+        font-size: 0.8rem;
+        margin-top: 3rem;
+        padding: 1rem 0;
+        text-align: right;
+      }
+      section[role="doc-endnotes"] { border-top: 1px solid var(--border); margin-top: 2rem; padding-top: 0.5rem; font-size: 0.9rem; color: var(--muted); }
+    </style>
+    <header>
+      <span class="logo"><a href="../index.html">Marcelo Zabani’s Blog</a></span>
+      <nav><a href="../index.html">Home</a></nav>
+    </header>
+    <main>
+      <h1>Algorithms to split group expenses</h1>
+      <div class="info">Posted on February 4, 2024</div>
+      <h2>The problem</h2>
+      <p>When traveling with friends or family it is typical that some some people will pay for things that others will also benefit from. Maybe Joe pays for the rented place, Jane pays for everyone’s dinner one night, Bob buys himself and Alice lunch some day.</p>
+      <p>The question then is how to calculate how much each person owes the others at the end of the trip. In this article I’ll try to devise different schemes and look at reducing the amount of necessary transactions to make everyone even.</p>
+      <p>This is a very simple problem, so one might wonder why an post. For one, devising a formal proof that the intuitive algorithm works was fun, particularly because I haven’t done maths since graduating 10 years ago. And also because it was humbling that such a simple problem got me so immersed, even terribly misled (I’ll explain why in the post) while solving it.</p>
+      <h3>A first solution</h3>
+      <p>Suppose four friends, Joe, Jane, Alice and Bob, travel together, and that we know all the spendings during the trip and who benefited from them, as such:</p>
+      <table>
+        <tr>
+          <td><strong>Payer</strong></td>
+          <td><strong>Total value payed</strong></td>
+          <td><strong>Description</strong></td>
+          <td><strong>Who benefited</strong></td>
+          <td><strong>Each benefited</strong></td>
+        </tr>
+        <tr>
+          <td>Joe</td>
+          <td>1000.00</td>
+          <td>Rent</td>
+          <td>All four</td>
+          <td>250.00</td>
+        </tr>
+        <tr>
+          <td>Jane</td>
+          <td>100.00</td>
+          <td>Dinner</td>
+          <td>All four</td>
+          <td>25.00</td>
+        </tr>
+        <tr>
+          <td>Bob</td>
+          <td>50.00</td>
+          <td>Lunch</td>
+          <td>Bob, Alice</td>
+          <td>25.00</td>
+        </tr>
+        <tr>
+          <td>Bob</td>
+          <td>15.00</td>
+          <td>Sunscreen</td>
+          <td>Bob (himself)</td>
+          <td>15.00</td>
+        </tr>
+      </table>
+      <p>Knowing there are <math><mi>𝑝</mi><mo>=</mo><mn>4</mn></math> participants, we can obtain how much each person benefited from each payment. Everyone benefited <math><mfrac><mn>1000.00</mn><mn>4</mn></mfrac><mo>=</mo><mn>250.00</mn></math> from rent and <math><mfrac><mn>100.00</mn><mn>4</mn></mfrac><mo>=</mo><mn>25.00</mn></math> from dinner, for example.</p>
+      <p>If we look at Joe, he spent <math><mn>1000.00</mn></math> but benefited only <math><mn>250.00</mn><mo>+</mo><mn>25.00</mn></math> from rent and dinner, so he must be paid <math><mn>1000.00</mn><mo>−</mo><mn>275.00</mn><mo>=</mo><mn>725.00</mn></math> in total at the end of the trip.</p>
+      <p>Alice is very different. She didn’t pay for anything and benefited <math><mn>250.00</mn><mo>+</mo><mn>25.00</mn><mo>+</mo><mn>25.00</mn><mo>=</mo><mn>300.00</mn></math> from rent, dinner and lunch. She will have to pay Bob, Jane and Joe for that.</p>
+      <p>The last line is just Bob buying himself sunscreen. We can safely ignore it.</p>
+      <p>It isn’t hard to build a <math><mi>𝑝</mi><mo lspace="0.2222222222222222em" rspace="0.2222222222222222em">⋅</mo><mfrac><mrow><mi>𝑝</mi><mo lspace="0em" rspace="0em">−</mo><mn>1</mn></mrow><mn>2</mn></mfrac></math> sized matrix with every pair of participants in it to determine how much each owes another from this. However, each person needs to pay <math><mfrac><mrow><mi>𝑝</mi><mo lspace="0em" rspace="0em">−</mo><mn>1</mn></mrow><mn>2</mn></mfrac></math> other participants in the worst-case scenario and non-worst-case scenarios can still involve a lot of payments (Jane only has to pay Joe in our example, but Alice has to pay 3 people). Even if someone’s only on the receiving end, it will be inconvenient for them to check they received the right amount of money if it’s split across multiple transactions. This gets tedious as more participants join. We can do better.</p>
+      <h3>Minimizing the number of transactions</h3>
+      <p>One alternative is to build a sequence of transactions such that each person in this chain receives a payment from the previous person and pays the next such that the difference in value is their net debt, i.e. total value benefited - total value payed.</p>
+      <p>To make sure we don’t get any negative payments in our list, we sort it with users that are more indebted first, less indebted last. This is what our list would look like for our example:</p>
+      <table>
+        <tr>
+          <td><strong>Order</strong></td>
+          <td><strong>From</strong></td>
+          <td><strong>To</strong></td>
+          <td><strong>Amount</strong></td>
+        </tr>
+        <tr>
+          <td>1</td>
+          <td>Alice</td>
+          <td>Bob</td>
+          <td><math><mn>300.00</mn></math></td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td>Bob</td>
+          <td>Jane</td>
+          <td><math><mn>550.00</mn></math></td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td>Jane</td>
+          <td>Joe</td>
+          <td><math><mn>725.00</mn></math></td>
+        </tr>
+      </table>
+      <p>With respect to both incoming and outgoing transactions, this is very nice: in the worst-case scenario all but one participant make one single payment and receive one single payment, one participant receives a single payment and makes none.</p>
+      <p>Going forward, let’s call this the canonical solution.</p>
+      <h3>Payment orders of non canonical solutions</h3>
+      <p>Previously we sorted participants with most indebted first to avoid negative values in payments. But there are other possible arrangements, such as the one below:</p>
+      <table>
+        <tr>
+          <td><strong>Order</strong></td>
+          <td><strong>From</strong></td>
+          <td><strong>To</strong></td>
+          <td><strong>Amount</strong></td>
+        </tr>
+        <tr>
+          <td>1</td>
+          <td>Bob</td>
+          <td>Alice</td>
+          <td><math><mn>250.00</mn></math></td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td>Alice</td>
+          <td>Jane</td>
+          <td><math><mn>550.00</mn></math></td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td>Jane</td>
+          <td>Joe</td>
+          <td><math><mn>725.00</mn></math></td>
+        </tr>
+      </table>
+      <p>There is no single order that avoids negative payments. If we enumerate transactions from <math><msub><mi>𝑡</mi><mn>1</mn></msub></math> to <math><msub><mi>𝑡</mi><mrow><mi>𝑝</mi><mo lspace="0em" rspace="0em">−</mo><mn>1</mn></mrow></msub></math>, a transaction <math><msub><mi>𝑡</mi><mi>𝑥</mi></msub></math> from participant <math><mi>𝑥</mi></math> with net debt <math><msub><mi>𝑑</mi><mi>𝑥</mi></msub></math> is defined by:</p>
+      <math display="block">
+        <msub>
+          <mi>𝑡</mi>
+          <mi>𝑥</mi>
+        </msub>
+        <mo>=</mo>
+        <msub>
+          <mi>𝑡</mi>
+          <mrow>
+            <mi>𝑥</mi>
+            <mo lspace="0em" rspace="0em">−</mo>
+            <mn>1</mn>
+          </mrow>
+        </msub>
+        <mo>+</mo>
+        <msub>
+          <mi>𝑑</mi>
+          <mi>𝑥</mi>
+        </msub>
+      </math>
+      <p>If we expand <math><msub><mi>𝑑</mi><mi>𝑥</mi></msub><mo>=</mo><msub><mi>𝑏</mi><mi>𝑥</mi></msub><mo>−</mo><msub><mi>𝑠</mi><mi>𝑥</mi></msub></math> (value benefited minus value spent) and require non-negative transactions:</p>
+      <math display="block">
+        <msub>
+          <mi>𝑡</mi>
+          <mi>𝑥</mi>
+        </msub>
+        <mo>=</mo>
+        <msub>
+          <mi>𝑡</mi>
+          <mrow>
+            <mi>𝑥</mi>
+            <mo lspace="0em" rspace="0em">−</mo>
+            <mn>1</mn>
+          </mrow>
+        </msub>
+        <mo>+</mo>
+        <msub>
+          <mi>𝑏</mi>
+          <mi>𝑥</mi>
+        </msub>
+        <mo>−</mo>
+        <msub>
+          <mi>𝑠</mi>
+          <mi>𝑥</mi>
+        </msub>
+        <mo>≥</mo>
+        <mn>0</mn>
+      </math>
+      <p>Notice that if <math><msub><mi>𝑡</mi><mi>𝑥</mi></msub></math> is equal to <math><mn>0</mn></math> for some participant, it means they can be skipped and make the chain even shorter (algorithmically we could even filter those participants out at an earlier stage). Let’s define the base case <math><msub><mi>𝑡</mi><mn>0</mn></msub><mo>=</mo><mn>0</mn></math> so that <math><msub><mi>𝑡</mi><mn>1</mn></msub></math> is well defined, and write down the first few terms of the series:</p>
+      <math display="block">
+        <msub>
+          <mi>𝑡</mi>
+          <mn>1</mn>
+        </msub>
+        <mo>=</mo>
+        <msub>
+          <mi>𝑏</mi>
+          <mn>1</mn>
+        </msub>
+        <mo>−</mo>
+        <msub>
+          <mi>𝑠</mi>
+          <mn>1</mn>
+        </msub>
+      </math>
+      <math display="block">
+        <msub>
+          <mi>𝑡</mi>
+          <mn>2</mn>
+        </msub>
+        <mo>=</mo>
+        <msub>
+          <mi>𝑡</mi>
+          <mn>1</mn>
+        </msub>
+        <mo>+</mo>
+        <msub>
+          <mi>𝑏</mi>
+          <mn>2</mn>
+        </msub>
+        <mo>−</mo>
+        <msub>
+          <mi>𝑠</mi>
+          <mn>2</mn>
+        </msub>
+      </math>
+      <math display="block">
+        <msub>
+          <mi>𝑡</mi>
+          <mn>3</mn>
+        </msub>
+        <mo>=</mo>
+        <msub>
+          <mi>𝑡</mi>
+          <mn>2</mn>
+        </msub>
+        <mo>+</mo>
+        <msub>
+          <mi>𝑏</mi>
+          <mn>3</mn>
+        </msub>
+        <mo>−</mo>
+        <msub>
+          <mi>𝑠</mi>
+          <mn>3</mn>
+        </msub>
+      </math>
+      <math display="block">
+        <mi>…</mi>
+      </math>
+      <math display="block">
+        <msub>
+          <mi>𝑡</mi>
+          <mrow>
+            <mi>𝑝</mi>
+            <mo lspace="0em" rspace="0em">−</mo>
+            <mn>1</mn>
+          </mrow>
+        </msub>
+        <mo>=</mo>
+        <msub>
+          <mi>𝑡</mi>
+          <mrow>
+            <mi>𝑝</mi>
+            <mo lspace="0em" rspace="0em">−</mo>
+            <mn>2</mn>
+          </mrow>
+        </msub>
+        <mo>+</mo>
+        <msub>
+          <mi>𝑏</mi>
+          <mrow>
+            <mi>𝑝</mi>
+            <mo lspace="0em" rspace="0em">−</mo>
+            <mn>1</mn>
+          </mrow>
+        </msub>
+        <mo>−</mo>
+        <msub>
+          <mi>𝑠</mi>
+          <mrow>
+            <mi>𝑝</mi>
+            <mo lspace="0em" rspace="0em">−</mo>
+            <mn>1</mn>
+          </mrow>
+        </msub>
+      </math>
+      <p>Now, any order of participants <math><mn>1</mn><mo>,</mo><mn>2</mn><mo>,</mo><mn>3</mn><mo>,</mo><mi>…</mi><mo>,</mo><mi>𝑝</mi><mo>−</mo><mn>1</mn></math> that you assign and keeps all of the equations above non-negative should be fine. But let’s keep exploring. If we add all equations from the top up to some arbitrary <math><msub><mi>𝑡</mi><mi>𝑥</mi></msub></math>, what do we get?</p>
+      <math display="block">
+        <msub>
+          <mi>𝑡</mi>
+          <mi>𝑥</mi>
+        </msub>
+        <mo>=</mo>
+        <msub>
+          <mi>𝑏</mi>
+          <mn>1</mn>
+        </msub>
+        <mo>+</mo>
+        <msub>
+          <mi>𝑏</mi>
+          <mn>2</mn>
+        </msub>
+        <mo>+</mo>
+        <mi>…</mi>
+        <mo>+</mo>
+        <msub>
+          <mi>𝑏</mi>
+          <mi>𝑥</mi>
+        </msub>
+        <mo>−</mo>
+        <mrow>
+          <mo>(</mo>
+          <mrow>
+            <msub>
+              <mi>𝑠</mi>
+              <mn>1</mn>
+            </msub>
+            <mo>+</mo>
+            <msub>
+              <mi>𝑠</mi>
+              <mn>2</mn>
+            </msub>
+            <mo>+</mo>
+            <mi>…</mi>
+            <mo>+</mo>
+            <msub>
+              <mi>𝑠</mi>
+              <mi>𝑥</mi>
+            </msub>
+          </mrow>
+          <mo>)</mo>
+        </mrow>
+      </math>
+      <p>This is equivalent to saying that a participant <math><mi>𝑥</mi></math> will transfer the amount of money that is the net debt of all previous participants and also of themselves. Despite it being intuitively “obvious” that the canonical solution must work, the <math><mi>𝑏</mi><mo>−</mo><mi>𝑠</mi></math> net values become increasingly negative when we reach participants that spent more than they benefited. So can we prove that sorting participants by their <math><mi>𝑏</mi><mo>−</mo><mi>𝑠</mi></math> in descending order always yields positive numbers for all <math><msub><mi>𝑡</mi><mi>𝑥</mi></msub></math>? Let’s try by induction.</p>
+      <h3>Proving there are no negative transactions in the canonical solution, by induction</h3>
+      <p>Given a number of participants and filtering out those with <math><mi>𝑏</mi><mo>−</mo><mi>𝑠</mi><mo>=</mo><mn>0</mn></math>, suppose <math><mi>𝑝</mi></math> participants remain (otherwise there’s no problem to solve). Because <math><mo lspace="0em">∑</mo><msub><mi>𝑏</mi><mi>𝑥</mi></msub><mo>−</mo><msub><mi>𝑠</mi><mi>𝑥</mi></msub><mo>=</mo><mn>0</mn></math>, there must be at least one participant with positive <math><mi>𝑏</mi><mo>−</mo><mi>𝑠</mi></math> and at least one with negative <math><mi>𝑏</mi><mo>−</mo><mi>𝑠</mi></math>. Let’s expand that summation so we can see more clearly:</p>
+      <math display="block">
+        <mo lspace="0em">∑</mo>
+        <msub>
+          <mi>𝑏</mi>
+          <mi>𝑥</mi>
+        </msub>
+        <mo>−</mo>
+        <msub>
+          <mi>𝑠</mi>
+          <mi>𝑥</mi>
+        </msub>
+        <mo>=</mo>
+        <msub>
+          <mi>𝑏</mi>
+          <mn>1</mn>
+        </msub>
+        <mo>−</mo>
+        <msub>
+          <mi>𝑠</mi>
+          <mn>1</mn>
+        </msub>
+        <mo>+</mo>
+        <msub>
+          <mi>𝑏</mi>
+          <mn>2</mn>
+        </msub>
+        <mo>−</mo>
+        <msub>
+          <mi>𝑠</mi>
+          <mn>2</mn>
+        </msub>
+        <mo>+</mo>
+        <mi>…</mi>
+        <mo>+</mo>
+        <msub>
+          <mi>𝑏</mi>
+          <mi>𝑝</mi>
+        </msub>
+        <mo>−</mo>
+        <msub>
+          <mi>𝑠</mi>
+          <mi>𝑝</mi>
+        </msub>
+        <mo>=</mo>
+        <mn>0</mn>
+      </math>
+      <p>Assigning participants in decreasing order of <math><mi>𝑏</mi><mo>−</mo><mi>𝑠</mi></math>, we know <math><msub><mi>𝑏</mi><mn>1</mn></msub><mo>−</mo><msub><mi>𝑠</mi><mn>1</mn></msub><mo>></mo><mn>0</mn></math> and <math><msub><mi>𝑏</mi><mi>𝑝</mi></msub><mo>−</mo><msub><mi>𝑠</mi><mi>𝑝</mi></msub><mo>&lt;</mo><mn>0</mn></math>. With help from the sum above, let’s evaluate <math><msub><mi>𝑡</mi><mrow><mi>𝑝</mi><mo lspace="0em" rspace="0em">−</mo><mn>1</mn></mrow></msub></math>:</p>
+      <math display="block">
+        <msub>
+          <mi>𝑡</mi>
+          <mrow>
+            <mi>𝑝</mi>
+            <mo lspace="0em" rspace="0em">−</mo>
+            <mn>1</mn>
+          </mrow>
+        </msub>
+        <mo>=</mo>
+        <msub>
+          <mi>𝑏</mi>
+          <mn>1</mn>
+        </msub>
+        <mo>−</mo>
+        <msub>
+          <mi>𝑠</mi>
+          <mn>1</mn>
+        </msub>
+        <mo>+</mo>
+        <msub>
+          <mi>𝑏</mi>
+          <mn>2</mn>
+        </msub>
+        <mo>−</mo>
+        <msub>
+          <mi>𝑠</mi>
+          <mn>2</mn>
+        </msub>
+        <mo>+</mo>
+        <mi>…</mi>
+        <mo>+</mo>
+        <msub>
+          <mi>𝑏</mi>
+          <mrow>
+            <mi>𝑝</mi>
+            <mo lspace="0em" rspace="0em">−</mo>
+            <mn>1</mn>
+          </mrow>
+        </msub>
+        <mo>−</mo>
+        <msub>
+          <mi>𝑠</mi>
+          <mrow>
+            <mi>𝑝</mi>
+            <mo lspace="0em" rspace="0em">−</mo>
+            <mn>1</mn>
+          </mrow>
+        </msub>
+        <mo>=</mo>
+        <mo form="prefix">−</mo>
+        <mrow>
+          <mo>(</mo>
+          <mrow>
+            <msub>
+              <mi>𝑏</mi>
+              <mi>𝑝</mi>
+            </msub>
+            <mo>−</mo>
+            <msub>
+              <mi>𝑠</mi>
+              <mi>𝑝</mi>
+            </msub>
+          </mrow>
+          <mo>)</mo>
+        </mrow>
+        <mo>></mo>
+        <mn>0</mn>
+      </math>
+      <p>So <math><msub><mi>𝑡</mi><mrow><mi>𝑝</mi><mo lspace="0em" rspace="0em">−</mo><mn>1</mn></mrow></msub></math> must be positive as well. But what about <math><msub><mi>𝑡</mi><mrow><mi>𝑝</mi><mo lspace="0em" rspace="0em">−</mo><mn>2</mn></mrow></msub></math>?</p>
+      <math display="block">
+        <msub>
+          <mi>𝑡</mi>
+          <mrow>
+            <mi>𝑝</mi>
+            <mo lspace="0em" rspace="0em">−</mo>
+            <mn>2</mn>
+          </mrow>
+        </msub>
+        <mo>=</mo>
+        <msub>
+          <mi>𝑏</mi>
+          <mn>1</mn>
+        </msub>
+        <mo>−</mo>
+        <msub>
+          <mi>𝑠</mi>
+          <mn>1</mn>
+        </msub>
+        <mo>+</mo>
+        <msub>
+          <mi>𝑏</mi>
+          <mn>2</mn>
+        </msub>
+        <mo>−</mo>
+        <msub>
+          <mi>𝑠</mi>
+          <mn>2</mn>
+        </msub>
+        <mo>+</mo>
+        <mi>…</mi>
+        <mo>+</mo>
+        <msub>
+          <mi>𝑏</mi>
+          <mrow>
+            <mi>𝑝</mi>
+            <mo lspace="0em" rspace="0em">−</mo>
+            <mn>2</mn>
+          </mrow>
+        </msub>
+        <mo>−</mo>
+        <msub>
+          <mi>𝑠</mi>
+          <mrow>
+            <mi>𝑝</mi>
+            <mo lspace="0em" rspace="0em">−</mo>
+            <mn>2</mn>
+          </mrow>
+        </msub>
+        <mo>=</mo>
+        <mo form="prefix">−</mo>
+        <mrow>
+          <mo>(</mo>
+          <mrow>
+            <msub>
+              <mi>𝑏</mi>
+              <mi>𝑝</mi>
+            </msub>
+            <mo>−</mo>
+            <msub>
+              <mi>𝑠</mi>
+              <mi>𝑝</mi>
+            </msub>
+          </mrow>
+          <mo>)</mo>
+        </mrow>
+        <mo>−</mo>
+        <mrow>
+          <mo>(</mo>
+          <mrow>
+            <msub>
+              <mi>𝑏</mi>
+              <mrow>
+                <mi>𝑝</mi>
+                <mo lspace="0em" rspace="0em">−</mo>
+                <mn>1</mn>
+              </mrow>
+            </msub>
+            <mo>−</mo>
+            <msub>
+              <mi>𝑠</mi>
+              <mrow>
+                <mi>𝑝</mi>
+                <mo lspace="0em" rspace="0em">−</mo>
+                <mn>1</mn>
+              </mrow>
+            </msub>
+          </mrow>
+          <mo>)</mo>
+        </mrow>
+      </math>
+      <p>We don’t know the sign of <math><msub><mi>𝑏</mi><mrow><mi>𝑝</mi><mo lspace="0em" rspace="0em">−</mo><mn>1</mn></mrow></msub><mo>−</mo><msub><mi>𝑠</mi><mrow><mi>𝑝</mi><mo lspace="0em" rspace="0em">−</mo><mn>1</mn></mrow></msub></math>. But if it’s negative, then the right-hand side of the equation helps us determine that <math><msub><mi>𝑡</mi><mrow><mi>𝑝</mi><mo lspace="0em" rspace="0em">−</mo><mn>2</mn></mrow></msub></math> is positive. If it is positive, then because terms are sorted all the previous <math><mi>𝑏</mi><mo>−</mo><mi>𝑠</mi></math> are also positive, and the left-hand side of the equation shows <math><msub><mi>𝑡</mi><mrow><mi>𝑝</mi><mo lspace="0em" rspace="0em">−</mo><mn>2</mn></mrow></msub></math> should also be positive.</p>
+      <p>It’s easy to extend this to all other terms and see all terms <math><msub><mi>𝑡</mi><mi>𝑥</mi></msub></math> are positive. ◼</p>
+      <h3>Are negative transactions really a problem?</h3>
+      <p>We went through great effort to prove the canonical solution only contains positive transactions, but would those actually be a problem?</p>
+      <p>Remember that <math><msub><mi>𝑏</mi><mtext>Bob</mtext></msub><mo>=</mo><mn>250.00</mn></math>, <math><msub><mi>𝑏</mi><mtext>Jane</mtext></msub><mo>=</mo><mn>175.00</mn></math>, <math><msub><mi>𝑏</mi><mtext>Alice</mtext></msub><mo>=</mo><mn>300.00</mn></math> and <math><msub><mi>𝑏</mi><mtext>Joe</mtext></msub><mo>=</mo><mo form="prefix">−</mo><mn>725.00</mn></math>.</p>
+      <p>If we create a sequence in the following arbitrary order: Jane -> Joe -> Bob > Alice, we get this:</p>
+      <table>
+        <tr>
+          <td><strong>Order</strong></td>
+          <td><strong>From</strong></td>
+          <td><strong>To</strong></td>
+          <td><strong>Amount</strong></td>
+        </tr>
+        <tr>
+          <td>1</td>
+          <td>Jane</td>
+          <td>Joe</td>
+          <td><math><mn>175.00</mn></math></td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td>Joe</td>
+          <td>Bob</td>
+          <td><math><mo>−</mo><mn>550.00</mn></math></td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td>Bob</td>
+          <td>Alice</td>
+          <td><math><mo>−</mo><mn>300.00</mn></math></td>
+        </tr>
+      </table>
+      <p>With negative transactions being paid in the other direction, this solution still satisfies the individual <math><mi>𝑏</mi></math> values (by construction), which when you think about it, is the only thing that truly matters.</p>
+      <p>My initial attachment to having only non-negative transactions was a silly one. We can put participants in any order as long as we apply <math><msub><mi>𝑡</mi><mi>𝑖</mi></msub><mo>=</mo><msub><mi>𝑡</mi><mrow><mi>𝑖</mi><mo lspace="0em" rspace="0em">−</mo><mn>1</mn></mrow></msub><mo>+</mo><msub><mi>𝑏</mi><mi>𝑖</mi></msub></math>. Money will leave indebted participants’ pockets and reach “credited” participants’ pockets correctly one way or another, by construction.</p>
+      <p>This does change the distribution of transactions, though, as now Joe will receive two transactions instead of just one. Still, the nicest properties are still there: each participant takes part in at most two transactions and the total number of transactions is <math><mi>𝑝</mi><mo>−</mo><mn>1</mn></math>. It’s easy to see that will always be the case, since no name appears in more than 2 lines in the table.</p>
+      <p>This is the source of my embarassment: there’s nothing wrong with negative transactions. As usual, I was too keen on working with formalism to prove a property that would restrict the problem. Looking for restrictions is sane, but using formalism too soon to get there instead of developing an intuition around the problem is something I have always done, and it has once again gotten in my way, even for such a simple problem. In the end, I proved an unnecessary restriction, and it wasn’t hard to see it by just looking at the transactions table and reasoning informally.</p>
+      <p>I considered not publishing this post, but thought maybe it helps me find other people that suffer from “formalitis” and get some tips. Please comment if you have any.</p>
+    </main>
+  </body>
+</html>
