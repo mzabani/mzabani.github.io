@@ -9,6 +9,7 @@
 #import "posts/2024-11-20-pg-what-serializable-isolation-really-means.typ" as p2024_11_20
 #import "posts/2024-12-08-pg-ssi-limitations.typ" as p2024_12_08
 #import "posts/2025-02-12-concurrently-forcing-haskell-streams.typ" as p2025_02_12
+#import "posts/making-hpgsql-faster.typ" as pHpgsql
 
 #let blog-title(title) = "Marcelo Zabani's Blog - " + title
 
@@ -46,4 +47,8 @@
 
 #document("posts/2025-02-12-concurrently-forcing-haskell-streams.html", title: blog-title(p2025_02_12.title))[
   #page(title: p2025_02_12.title, subtitle: p2025_02_12.subtitle)[#p2025_02_12.body]
+]
+
+#document("posts/making-hpgsql-faster.html", title: blog-title(pHpgsql.title))[
+  #page(title: pHpgsql.title, subtitle: pHpgsql.subtitle)[#pHpgsql.body]
 ]

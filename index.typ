@@ -9,6 +9,7 @@ Older posts are on my Wordpress at #link("https://mzabani.wordpress.com/")[#"htt
 = Posts
 
 #html.elem("ul", attrs: (id: "post-list"))[
+  #html.elem("li")[#link("./posts/making-hpgsql-faster.html")[Closing the performance gap between hpgsql (Haskell) and tokio-postgres (Rust)] - November 15, 2026]
   #html.elem("li")[#link("./posts/2025-02-12-concurrently-forcing-haskell-streams.html")[Concurrently processing streams in Haskell] - February 12, 2025]
   #html.elem("li")[#link("./posts/2024-12-08-pg-ssi-limitations.html")[Limitations of SSI's implementation in PostgreSQL] - December 8, 2024]
   #html.elem("li")[#link("./posts/2024-11-20-pg-what-serializable-isolation-really-means.html")[What Serializable isolation really means in PostgreSQL] - November 20, 2024]

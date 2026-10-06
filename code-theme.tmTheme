@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>name</key>
+	<string>Solarized (accents)</string>
+	<key>settings</key>
+	<array>
+		<dict>
+			<key>settings</key>
+			<dict>
+				<key>background</key>
+				<string>#FFFFFF</string>
+				<key>foreground</key>
+				<string>#1A1A1A</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>name</key>
+			<string>Comment</string>
+			<key>scope</key>
+			<string>comment</string>
+			<key>settings</key>
+			<dict>
+				<key>foreground</key>
+				<string>#657B83</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>name</key>
+			<string>Keyword / Operator</string>
+			<key>scope</key>
+			<string>keyword, keyword.operator, keyword.other, keyword.control</string>
+			<key>settings</key>
+			<dict>
+				<key>foreground</key>
+				<string>#859900</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>name</key>
+			<string>Type / Constructor</string>
+			<key>scope</key>
+			<string>entity.name.type, support.type, storage.type, entity.name.class, entity.name.tag</string>
+			<key>settings</key>
+			<dict>
+				<key>foreground</key>
+				<string>#B58900</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>name</key>
+			<string>Function / Field name</string>
+			<key>scope</key>
+			<string>entity.name.function</string>
+			<key>settings</key>
+			<dict>
+				<key>foreground</key>
+				<string>#268BD2</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>name</key>
+			<string>Constant / String</string>
+			<key>scope</key>
+			<string>constant.numeric, constant.language, constant.character, string</string>
+			<key>settings</key>
+			<dict>
+				<key>foreground</key>
+				<string>#2AA198</string>
+			</dict>
+		</dict>
+	</array>
+</dict>
+</plist>

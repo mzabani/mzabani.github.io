@@ -125,9 +125,9 @@
       }
       header .logo a { font-weight: bold; font-size: 1.1rem; text-decoration: none; color: var(--fg); }
       header nav a { margin-left: 1rem; text-decoration: none; font-weight: bold; text-transform: uppercase; font-size: 0.9rem; color: var(--fg); }
-      h1 { font-size: 1.6rem; margin-bottom: 0.25rem; }
-      h2 { font-size: 1.3rem; margin-top: 2rem; }
-      h3 { font-size: 1.1rem; }
+      h1 { font-size: 2rem; margin-bottom: 0.25rem; }
+      h2 { font-size: 1.6rem; margin-top: 2rem; }
+      h3 { font-size: 1.3rem; }
       .info { color: var(--muted); font-size: 0.85rem; font-style: italic; margin-bottom: 1.5rem; }
       pre {
         background: var(--code-bg);
@@ -152,6 +152,60 @@
         text-align: right;
       }
       section[role="doc-endnotes"] { border-top: 1px solid var(--border); margin-top: 2rem; padding-top: 0.5rem; font-size: 0.9rem; color: var(--muted); }
+      .breakout {
+        box-sizing: border-box;
+        width: 100vw;
+        max-width: 1200px;
+        padding: 0 1.25rem;
+        position: relative;
+        left: 50%;
+        transform: translateX(-50%);
+      }
+      @media (max-width: 768px) {
+        .breakout {
+          width: 100%;
+          max-width: 100%;
+          position: static;
+          left: auto;
+          transform: none;
+        }
+      }
+      nav[role="doc-toc"] {
+        background: var(--code-bg);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 0.75rem 1.25rem;
+        margin: 1.5rem 0;
+      }
+      nav[role="doc-toc"] ol { margin: 0.25rem 0; padding-left: 1.25rem; }
+      nav[role="doc-toc"] > ol { padding-left: 0; }
+      nav[role="doc-toc"] li { margin: 0.25rem 0; }
+      nav[role="doc-toc"] a { text-decoration: none; }
+      nav[role="doc-toc"] a:hover { text-decoration: underline; }
+      .hover-tip { position: relative; }
+      .hover-tip .tip-trigger {
+        border-bottom: 1px dotted var(--muted);
+        cursor: help;
+      }
+      .hover-tip .tip-popup {
+        display: none;
+        position: absolute;
+        left: 0;
+        bottom: 125%;
+        background: var(--bg);
+        color: var(--fg);
+        border: 1px solid var(--border);
+        padding: 0.35rem 0.6rem;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        line-height: 1.4;
+        white-space: normal;
+        width: max-content;
+        max-width: 320px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+        z-index: 10;
+      }
+      .hover-tip:hover .tip-popup { display: block; }
     </style>
     <header>
       <span class="logo"><a href="../index.html">Marcelo Zabani’s Blog</a></span>
@@ -172,15 +226,15 @@
       <p>It sounds pretty robust. How can this go wrong? Let’s look at examples.</p>
       <h2>First example: doctors on call</h2>
       <p>Suppose you manage a hospital and you you must always have at least one doctor on call at any one time. Bob, Alice and Joe are your doctors, and initially Alice and Joe are on call but Bob isn’t.</p>
-      <pre><code data-lang="sql"><span style="color: #d73948">CREATE</span> <span style="color: #d73948">TABLE</span> <span style="color: #4b69c6">doctors</span> (id <span style="color: #d73948">SERIAL</span> <span style="color: #d73948">PRIMARY KEY</span>, name <span style="color: #d73948">text</span>, oncall BOOL);
-<span style="color: #d73948">INSERT INTO</span> doctors (name, oncall) <span style="color: #d73948">VALUES</span> (<span style="color: #198810">'</span><span style="color: #198810">Alice</span><span style="color: #198810">'</span>, <span style="color: #b60157">TRUE</span>), (<span style="color: #198810">'</span><span style="color: #198810">Joe</span><span style="color: #198810">'</span>, <span style="color: #b60157">TRUE</span>), (<span style="color: #198810">'</span><span style="color: #198810">Bob</span><span style="color: #198810">'</span>, <span style="color: #b60157">FALSE</span>);</code></pre>
+      <pre><code data-lang="sql"><span style="color: #859900">CREATE</span> <span style="color: #859900">TABLE</span> <span style="color: #268bd2">doctors</span> (id <span style="color: #b58900">SERIAL</span> PRIMARY KEY, name <span style="color: #b58900">text</span>, oncall BOOL);
+<span style="color: #859900">INSERT INTO</span> doctors (name, oncall) <span style="color: #859900">VALUES</span> (<span style="color: #2aa198">'</span><span style="color: #2aa198">Alice</span><span style="color: #2aa198">'</span>, TRUE), (<span style="color: #2aa198">'</span><span style="color: #2aa198">Joe</span><span style="color: #2aa198">'</span>, TRUE), (<span style="color: #2aa198">'</span><span style="color: #2aa198">Bob</span><span style="color: #2aa198">'</span>, FALSE);</code></pre>
       <p>Now you write the endpoint that takes a doctor off call (in some pseudo-code):</p>
-      <pre><code data-lang="sql">x <span style="color: #d73948">&lt;</span><span style="color: #1d6c76">-</span> <span style="color: #d73948">SELECT</span> <span style="color: #4b69c6">COUNT</span>(<span style="color: #d73948">*</span>) <span style="color: #d73948">FROM</span> doctors <span style="color: #d73948">WHERE</span> oncall;
-if x <span style="color: #d73948">>=</span> <span style="color: #b60157">2</span> <span style="color: #d73948">then</span>
-  <span style="color: #d73948">UPDATE</span> doctors <span style="color: #d73948">SET</span> oncall<span style="color: #d73948">=</span><span style="color: #b60157">false</span> <span style="color: #d73948">WHERE</span> name <span style="color: #d73948">=</span> {DOCTORNAMEHERE};
-<span style="color: #d73948">else</span>
-  RAISE <span style="color: #198810">'</span><span style="color: #198810">This would leave no doctors on call</span><span style="color: #198810">'</span>;
-<span style="color: #d73948">end</span> if</code></pre>
+      <pre><code data-lang="sql">x <span style="color: #859900">&lt;</span><span style="color: #859900">-</span> <span style="color: #859900">SELECT</span> COUNT(*) <span style="color: #859900">FROM</span> doctors <span style="color: #859900">WHERE</span> oncall;
+if x <span style="color: #859900">>=</span> <span style="color: #2aa198">2</span> <span style="color: #859900">then</span>
+  <span style="color: #859900">UPDATE</span> doctors <span style="color: #859900">SET</span> oncall<span style="color: #859900">=</span>false <span style="color: #859900">WHERE</span> name <span style="color: #859900">=</span> {DOCTORNAMEHERE};
+<span style="color: #859900">else</span>
+  RAISE <span style="color: #2aa198">'</span><span style="color: #2aa198">This would leave no doctors on call</span><span style="color: #2aa198">'</span>;
+<span style="color: #859900">end</span> if</code></pre>
       <p>Before continuing, take a minute to look at the code above: it looks right. It would probably pass review in most places. It’s the code I would write, but also most people I know. Or it’s similar to that.</p>
       <p>Suppose users call your endpoint twice for ‘Alice’ and for ‘Joe’, and the transactions run concurrently. Even with Repeatable-Read isolation level, both transactions will run and commit successfully, and at the end you will have 0 (zero) doctors on call. This is of course very different from what would happen if you ran two transactions <em>one after the other/sequentially</em>, so it’s a perfect example of a serialization anomaly.</p>
       <p>With Serializable isolation one of the two transactions would fail with:</p>
@@ -194,13 +248,13 @@ if x <span style="color: #d73948">>=</span> <span style="color: #b60157">2</span
         <li>REPORT: reads the current batch number from the control table, then reads all entries from the receipts table with the previous batch number (i.e. to display a total of the previous day’s receipts)</li>
       </ul>
       <p>Let’s create these tables with the current batch starting as <code>1</code> and one receipt in it:</p>
-      <pre><code data-lang="sql"><span style="color: #d73948">CREATE</span> <span style="color: #d73948">TABLE</span> <span style="color: #4b69c6">current_batch</span> (batch <span style="color: #d73948">INT</span>);
-<span style="color: #d73948">INSERT INTO</span> current_batch <span style="color: #d73948">VALUES</span> (<span style="color: #b60157">1</span>);
-<span style="color: #d73948">CREATE</span> <span style="color: #d73948">TABLE</span> <span style="color: #4b69c6">receipts</span> (id <span style="color: #d73948">SERIAL</span> <span style="color: #d73948">PRIMARY KEY</span>, batch <span style="color: #d73948">INT</span>, amount <span style="color: #d73948">INT</span>);
-<span style="color: #d73948">INSERT INTO</span> receipts (batch, amount) <span style="color: #d73948">VALUES</span> (<span style="color: #b60157">1</span>, <span style="color: #b60157">100</span>);</code></pre>
+      <pre><code data-lang="sql"><span style="color: #859900">CREATE</span> <span style="color: #859900">TABLE</span> <span style="color: #268bd2">current_batch</span> (batch <span style="color: #b58900">INT</span>);
+<span style="color: #859900">INSERT INTO</span> current_batch <span style="color: #859900">VALUES</span> (<span style="color: #2aa198">1</span>);
+<span style="color: #859900">CREATE</span> <span style="color: #859900">TABLE</span> <span style="color: #268bd2">receipts</span> (id <span style="color: #b58900">SERIAL</span> PRIMARY KEY, batch <span style="color: #b58900">INT</span>, amount <span style="color: #b58900">INT</span>);
+<span style="color: #859900">INSERT INTO</span> receipts (batch, amount) <span style="color: #859900">VALUES</span> (<span style="color: #2aa198">1</span>, <span style="color: #2aa198">100</span>);</code></pre>
       <p>Let’s look at one particular transaction first, the <code>REPORT</code> one:</p>
-      <pre><code data-lang="sql">current_batch <span style="color: #d73948">&lt;</span><span style="color: #1d6c76">-</span> <span style="color: #d73948">SELECT</span> batch <span style="color: #d73948">FROM</span> current_batch;
-<span style="color: #d73948">SELECT</span> <span style="color: #4b69c6">SUM</span>(amount) <span style="color: #d73948">FROM</span> receipts <span style="color: #d73948">WHERE</span> batch<span style="color: #d73948">=</span>current_batch<span style="color: #1d6c76">-</span><span style="color: #b60157">1</span>;</code></pre>
+      <pre><code data-lang="sql">current_batch <span style="color: #859900">&lt;</span><span style="color: #859900">-</span> <span style="color: #859900">SELECT</span> batch <span style="color: #859900">FROM</span> current_batch;
+<span style="color: #859900">SELECT</span> SUM(amount) <span style="color: #859900">FROM</span> receipts <span style="color: #859900">WHERE</span> batch<span style="color: #859900">=</span>current_batch<span style="color: #859900">-</span><span style="color: #2aa198">1</span>;</code></pre>
       <p>Again I will ask you to read this and think for a minute. This looks right, doesn’t it? Can you think of what problems might arise from this under Repeatable-Read isolation?</p>
       <p>The answer is: <strong>it can report the sum of a batch that might still have receipts added to it.</strong> I am not kidding. Let me show you:</p>
       <p>Suppose 3 transactions run concurrently in Repeatable-Read mode, each with one of the 3 kinds of transactions, and their execution is interleaved as such:</p>
@@ -213,8 +267,8 @@ if x <span style="color: #d73948">>=</span> <span style="color: #b60157">2</span
         <tr>
           <td></td>
           <td>
-            <pre><code data-lang="sql"><span style="color: #d73948">BEGIN</span> ISOLATION LEVEL REPEATABLE READ;
-current_batch <span style="color: #d73948">&lt;</span><span style="color: #1d6c76">-</span> <span style="color: #d73948">SELECT</span> batch <span style="color: #d73948">FROM</span> current_batch;</code></pre>
+            <pre><code data-lang="sql"><span style="color: #859900">BEGIN</span> ISOLATION LEVEL REPEATABLE READ;
+current_batch <span style="color: #859900">&lt;</span><span style="color: #859900">-</span> <span style="color: #859900">SELECT</span> batch <span style="color: #859900">FROM</span> current_batch;</code></pre>
           </td>
           <td></td>
         </tr>
@@ -222,17 +276,17 @@ current_batch <span style="color: #d73948">&lt;</span><span style="color: #1d6c7
           <td></td>
           <td></td>
           <td>
-            <pre><code data-lang="sql"><span style="color: #d73948">BEGIN</span> ISOLATION LEVEL REPEATABLE READ;
-<span style="color: #d73948">UPDATE</span> current_batch <span style="color: #d73948">SET</span> batch<span style="color: #d73948">=</span>batch<span style="color: #1d6c76">+</span><span style="color: #b60157">1</span>;
-<span style="color: #d73948">COMMIT</span>;</code></pre>
+            <pre><code data-lang="sql"><span style="color: #859900">BEGIN</span> ISOLATION LEVEL REPEATABLE READ;
+<span style="color: #859900">UPDATE</span> current_batch <span style="color: #859900">SET</span> batch<span style="color: #859900">=</span>batch<span style="color: #859900">+</span><span style="color: #2aa198">1</span>;
+<span style="color: #859900">COMMIT</span>;</code></pre>
           </td>
         </tr>
         <tr>
           <td>
-            <pre><code data-lang="sql"><span style="color: #d73948">BEGIN</span> ISOLATION LEVEL REPEATABLE READ;
-current_batch <span style="color: #d73948">&lt;</span><span style="color: #1d6c76">-</span> <span style="color: #d73948">SELECT</span> batch <span style="color: #d73948">FROM</span> current_batch;
-<span style="color: #d73948">SELECT</span> <span style="color: #4b69c6">SUM</span>(amount) <span style="color: #d73948">FROM</span> receipts <span style="color: #d73948">WHERE</span> batch<span style="color: #d73948">=</span>current_batch<span style="color: #1d6c76">-</span><span style="color: #b60157">1</span>;
-<span style="color: #d73948">COMMIT</span>;</code></pre>
+            <pre><code data-lang="sql"><span style="color: #859900">BEGIN</span> ISOLATION LEVEL REPEATABLE READ;
+current_batch <span style="color: #859900">&lt;</span><span style="color: #859900">-</span> <span style="color: #859900">SELECT</span> batch <span style="color: #859900">FROM</span> current_batch;
+<span style="color: #859900">SELECT</span> SUM(amount) <span style="color: #859900">FROM</span> receipts <span style="color: #859900">WHERE</span> batch<span style="color: #859900">=</span>current_batch<span style="color: #859900">-</span><span style="color: #2aa198">1</span>;
+<span style="color: #859900">COMMIT</span>;</code></pre>
           </td>
           <td></td>
           <td></td>
@@ -240,8 +294,8 @@ current_batch <span style="color: #d73948">&lt;</span><span style="color: #1d6c7
         <tr>
           <td></td>
           <td>
-            <pre><code data-lang="sql"><span style="color: #d73948">INSERT INTO</span> receipts (batch, amount) <span style="color: #d73948">VALUES</span> (current_batch, <span style="color: #b60157">1000</span>);
-<span style="color: #d73948">COMMIT</span>;</code></pre>
+            <pre><code data-lang="sql"><span style="color: #859900">INSERT INTO</span> receipts (batch, amount) <span style="color: #859900">VALUES</span> (current_batch, <span style="color: #2aa198">1000</span>);
+<span style="color: #859900">COMMIT</span>;</code></pre>
           </td>
           <td></td>
         </tr>

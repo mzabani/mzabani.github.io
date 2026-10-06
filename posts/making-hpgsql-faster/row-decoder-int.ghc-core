@@ -1,0 +1,19 @@
+ (\ (offset :: ByteStringIdx) (array :: PinnedByteArray) ->
+    case idParser offset array
+    of {
+      ParseFail idErr -> ParseFail idErr;
+      ParseOk idValue offsetAfterId# ->
+        case dayParser (I# offsetAfterId#) array
+        of {
+          ParseFail dayErr -> ParseFail dayErr;
+          ParseOk dayValue offsetAfterDay# ->
+            case textParser (I# offsetAfterDay#) array
+            of {
+              ParseFail textErr -> ParseFail textErr;
+              ParseOk textValue finalOffset# ->
+                case idValue of { I# idValue# ->
+                  ParseOk (BestCaseScenarioRecord idValue# dayValue textValue) finalOffset#
+                }
+            }
+        }
+    })

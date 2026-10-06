@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Marcelo Zabani's Blog - Closing the performance gap between hpgsql (Haskell) and tokio-postgres (Rust)</title>
+    <style>
+      /* Alignment */
+      mtable.right-align mtd,
+      mtable mtd.right-align,
+      mtable.left-align mtd.right-align,
+      mtable.aligned mtd:nth-child(odd) {
+        justify-items: end;
+        text-align: right;
+      }
+      mtable.cases mtd,
+      mtable.left-align mtd,
+      mtable mtd.left-align,
+      mtable.aligned mtd:nth-child(even),
+      math:is(:not([display])) > mtable.multiline-equation mtd {
+        justify-items: start;
+        text-align: left;
+      }
+      mtable.cases mtd,
+      mtable.aligned mtd,
+      mtable mtd.flushed,
+      mtable mtd.left-flush {
+        padding-left: 0;
+      }
+      mtable.cases mtd,
+      mtable.aligned mtd,
+      mtable mtd.flushed,
+      mtable mtd.right-flush {
+        padding-right: 0;
+      }
+      
+      /* Tables */
+      mtable {
+        math-style: inherit;
+      }
+      mtd {
+        math-depth: auto-add;
+        math-style: compact;
+        math-shift: compact;
+      }
+      
+      /* Equations */
+      mtable.multiline-equation mtd {
+        math-depth: inherit;
+        math-style: inherit;
+        math-shift: inherit;
+        padding: 0;
+      }
+      math > mtable.multiline-equation mtr:not(:last-child) mtd {
+        padding-bottom: 0.5em;
+      }
+      
+      /* Fractions */
+      mfrac {
+        padding-inline: 0;
+        margin-inline: 0.1em;
+      }
+      
+      /* Accents */
+      mover[accent="true" i] > :first-child {
+        font-feature-settings: "dtls";
+      }
+      mover.dotted[accent="true" i] > :first-child {
+        font-feature-settings: "dtls" 0;
+      }
+      
+      /* Other rules for scriptlevel, displaystyle and math-shift */
+      munder > :nth-child(2),
+      munderover > :nth-child(2) {
+        math-shift: compact
+      }
+      munder[accentunder="true" i] > :not(:first-child),
+      mover[accent="true" i] > :not(:first-child) {
+        math-depth: inherit;
+        math-style: inherit;
+        math-shift: inherit;
+      }
+    </style>
+  </head>
+  <body>
+    <style>
+      
+      :root {
+        color-scheme: light dark;
+        --bg: #ffffff;
+        --fg: #1a1a1a;
+        --muted: #666666;
+        --border: #dddddd;
+        --code-bg: #f5f5f5;
+        --link: #0056b3;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #16181c;
+          --fg: #e6e6e6;
+          --muted: #9a9a9a;
+          --border: #3a3d42;
+          --code-bg: #1f2226;
+          --link: #6cb2ff;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        background: var(--bg);
+        color: var(--fg);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+        line-height: 1.6;
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 0 1.25rem;
+      }
+      a { color: var(--link); }
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        border-bottom: 2px solid var(--fg);
+        margin-bottom: 2rem;
+        padding: 1rem 0;
+      }
+      header .logo a { font-weight: bold; font-size: 1.1rem; text-decoration: none; color: var(--fg); }
+      header nav a { margin-left: 1rem; text-decoration: none; font-weight: bold; text-transform: uppercase; font-size: 0.9rem; color: var(--fg); }
+      h1 { font-size: 2rem; margin-bottom: 0.25rem; }
+      h2 { font-size: 1.6rem; margin-top: 2rem; }
+      h3 { font-size: 1.3rem; }
+      .info { color: var(--muted); font-size: 0.85rem; font-style: italic; margin-bottom: 1.5rem; }
+      pre {
+        background: var(--code-bg);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 0.75rem 1rem;
+        overflow-x: auto;
+        font-size: 0.85rem;
+      }
+      code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+      p code, li code { background: var(--code-bg); padding: 0.1em 0.3em; border-radius: 4px; }
+      table { border-collapse: collapse; margin: 1.5rem 0; width: 100%; }
+      table, th, td { border: 1px solid var(--border); }
+      th, td { padding: 0.5rem 0.75rem; text-align: left; vertical-align: top; }
+      ul#post-list li { margin-bottom: 0.5rem; }
+      footer {
+        border-top: 2px solid var(--border);
+        color: var(--muted);
+        font-size: 0.8rem;
+        margin-top: 3rem;
+        padding: 1rem 0;
+        text-align: right;
+      }
+      section[role="doc-endnotes"] { border-top: 1px solid var(--border); margin-top: 2rem; padding-top: 0.5rem; font-size: 0.9rem; color: var(--muted); }
+      .breakout {
+        box-sizing: border-box;
+        width: 100vw;
+        max-width: 1200px;
+        padding: 0 1.25rem;
+        position: relative;
+        left: 50%;
+        transform: translateX(-50%);
+      }
+      @media (max-width: 768px) {
+        .breakout {
+          width: 100%;
+          max-width: 100%;
+          position: static;
+          left: auto;
+          transform: none;
+        }
+      }
+      nav[role="doc-toc"] {
+        background: var(--code-bg);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 0.75rem 1.25rem;
+        margin: 1.5rem 0;
+      }
+      nav[role="doc-toc"] ol { margin: 0.25rem 0; padding-left: 1.25rem; }
+      nav[role="doc-toc"] > ol { padding-left: 0; }
+      nav[role="doc-toc"] li { margin: 0.25rem 0; }
+      nav[role="doc-toc"] a { text-decoration: none; }
+      nav[role="doc-toc"] a:hover { text-decoration: underline; }
+      .hover-tip { position: relative; }
+      .hover-tip .tip-trigger {
+        border-bottom: 1px dotted var(--muted);
+        cursor: help;
+      }
+      .hover-tip .tip-popup {
+        display: none;
+        position: absolute;
+        left: 0;
+        bottom: 125%;
+        background: var(--bg);
+        color: var(--fg);
+        border: 1px solid var(--border);
+        padding: 0.35rem 0.6rem;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        line-height: 1.4;
+        white-space: normal;
+        width: max-content;
+        max-width: 320px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+        z-index: 10;
+      }
+      .hover-tip:hover .tip-popup { display: block; }
+    </style>
+    <header>
+      <span class="logo"><a href="../index.html">Marcelo Zabani’s Blog</a></span>
+      <nav><a href="../index.html">Home</a></nav>
+    </header>
+    <main>
+      <h1>Closing the performance gap between hpgsql (Haskell) and tokio-postgres (Rust)</h1>
+      <div class="info">Posted on 2026-11-15</div>
+      <p>This article covers how I made <a href="https://github.com/mzabani/hpgsql">hpgsql</a>, a PostgreSQL driver library written in pure Haskell, a lot faster when decoding rows.</p>
+      <p>Benchmarks decoding 2 million rows with 17 columns, all into Haskell records, then garbage-collecting, went from <em>2.26s</em> down to <em>1.139s</em>, a bit faster than .NET’s Npgsql’s <em>1.167s</em> and ~10% slower than the <em>1.032s</em> of Rust’s tokio-postgres on the same benchmark. The exact benchmarking methodology is better <a href="https://github.com/mzabani/hpgsql/blob/master/BENCHMARKS.md">described here</a>.</p>
+      <p>It’s important to say that I think this is a reasonable benchmark, but there is another reasonable benchmark (that materializes rows into collections instead of just streaming them) where hpgsql is ~3x <em>slower</em> than Npgsql and tokio-postgres. Keep reading to find out more.</p>
+      <p>The performance work which I cover partially here spanned ~6 months, and my hope is that this is an interesting read, but mostly that I can contribute back to the Haskell community by sharing my experience with some of my failed attempts at improving performance, and why not some of the successful ones, too.</p>
+      <p>From <a href="https://github.com/mzabani/hpgsql/pull/26">internal batching</a>, to <a href="https://github.com/mzabani/hpgsql/pull/43">replacing dependencies</a> with my own implementations, to finding <a href="https://github.com/mzabani/hpgsql/pull/44">inlining opportunities</a>, <a href="https://github.com/mzabani/hpgsql/pull/61">strictness annotations</a> and bigger refactors pulling a custom <a href="https://github.com/mzabani/hpgsql/pull/56">PinnedByteArray parser up the row decoding pipeline</a>, this post will describe some of the optimizations that got us there, where we still fall short of Npgsql and tokio-postgres, and present ideas and ask questions as we go.</p>
+      <nav role="doc-toc">
+        <ol style="list-style-type: none">
+          <li>
+            <div><a href="#loc-1">Some wins first</a></div>
+            <ol style="list-style-type: none">
+              <li><a href="#loc-2">hpgsql’s advantage to postgresql-simple, and APIs</a></li>
+              <li><a href="#loc-3">Haskell libraries’ advantage to Npgsql (.NET) and tokio-postgres (Rust)</a></li>
+              <li><a href="#loc-4">Trusting Postgres, to some extent</a></li>
+            </ol>
+          </li>
+          <li><a href="#loc-5">ByteStrings, <code>unsafePerformIO</code> and unnecessary boxing</a></li>
+          <li><a href="#loc-6">Why is materializing List and Vector so slow?</a></li>
+          <li>
+            <div><a href="#loc-7">An experience report on inlining, CPS parsers, boxing, and representation polymorphism</a></div>
+            <ol style="list-style-type: none">
+              <li><a href="#loc-8">CPS parsers aren’t always so great</a></li>
+              <li><a href="#loc-9">Trying (and failing?) to turn the array offset into an unboxed <code>Int#</code></a></li>
+              <li><a href="#loc-10">The dream optimizations working together</a></li>
+            </ol>
+          </li>
+          <li><a href="#loc-11">Conclusion</a></li>
+        </ol>
+      </nav>
+      <h2 id="loc-1">Some wins first</h2>
+      <h3 id="loc-2">hpgsql’s advantage to postgresql-simple, and APIs</h3>
+      <p>When compared to postgresql-simple, both hpgsql and hasql have at least one advantage: their row decoders are not Monads, only Applicatives.</p>
+      <p>To understand what that means, look at the following hypothetical row decoder:</p>
+      <pre><code data-lang="haskell"><span style="color: #268bd2">rowDecoder</span> <span style="color: #859900">::</span> <span style="color: #b58900">RowDecoder</span> (<span style="color: #b58900">Text</span>, <span style="color: #b58900">Int</span>, <span style="color: #b58900">Bool</span>)
+rowDecoder <span style="color: #859900">=</span> <span style="color: #859900">do</span>
+  textField <span style="color: #859900">&lt;-</span> field @Text
+  intField <span style="color: #859900">&lt;-</span> field @Int
+  <span style="color: #657b83">--</span><span style="color: #657b83"> This will look non-sensical, but it's on purpose</span>
+  lastField <span style="color: #859900">&lt;-</span> <span style="color: #859900">if</span> intField <span style="color: #859900">></span> <span style="color: #2aa198">10</span> <span style="color: #859900">then</span> (<span style="color: #859900">==</span> <span style="color: #2aa198">4</span>) <span style="color: #859900">&lt;$></span> field @Int <span style="color: #859900">else</span> field @Bool
+  pure (textField, intField, lastField)</code></pre>
+      <p>That last field is a query result’s column, and given a single query it can only have one type. Yet, with a monadic row decoder, the code above is perfectly valid.</p>
+      <p>The way I understand this is that if row decoders are Monads, libraries are forced to do one of:</p>
+      <ul>
+        <li>Type-check fields for every row, instead of once per query, which is no small price to pay.</li>
+        <li>Type-check fields once per query and assume we won’t write such obviously broken monads, with risks to decoding correctness.</li>
+      </ul>
+      <h3 id="loc-3">Haskell libraries’ advantage to Npgsql (.NET) and tokio-postgres (Rust)</h3>
+      <p>The APIs for Npgsql and tokio-postgres both look something like this:</p>
+      <pre><code data-lang="cs">textField <span style="color: #859900">=</span> reader.GetText(<span style="color: #2aa198">0</span>);
+intField <span style="color: #859900">=</span> reader.GetInt32(<span style="color: #2aa198">1</span>);
+boolField <span style="color: #859900">=</span> reader.GetBoolean(<span style="color: #2aa198">2</span>);
+<span style="color: #859900">return</span> <span style="color: #859900">new</span> { textField, intField, lastField };</code></pre>
+      <p>This might look innocent, but every row returned by PostgreSQL uses variable-length encoding for its fields. That first text field can have arbitrary length, and NULLs don’t take any bytes in the row (except for a four byte-long <math><mo>−</mo><mn>1</mn></math> value to indicate a <code>NULL</code> coming next).</p>
+      <p>So fetching the <math><mi>𝑛</mi></math>th field is <math><mi>𝑂</mi><mrow><mo>(</mo><mi>𝑛</mi><mo>)</mo></mrow></math>, and thus fetching each row is quadratic in the number of fields.</p>
+      <p>This looks like a lower-level API than directly decoding rows into user-defined types, but it actually imposes additional cost.</p>
+      <p>To be fair, I don’t know how much this actually costs, but I found it interesting enough to mention.</p>
+      <p>Hpgsql parses every row’s fields in linear time in the number of fields, and I don’t know how postgresql-simple and hasql are implemented, but I believe they too could do this in case they already don’t.</p>
+      <p>And lastly, this has the same downside as Monadic row decoders, which is that every field must be type-checked in every row, or else there might be correctness issues.</p>
+      <h3 id="loc-4">Trusting Postgres, to some extent</h3>
+      <p>Trusting Postgres’ output allows some performance optimizations in hpgsql:</p>
+      <ul>
+        <li>We trust Postgres to encode UTF8 correctly to avoid <code>decodeUtf8</code> when producing <code>Text</code> values (hpgsql forces client_encoding=UTF8).</li>
+        <li>We also trust it to produce valid JSON in <code>PgJson</code> and other types/instances to avoid the cost of checking JSON validity.</li>
+      </ul>
+      <p>As I see it, these are no different than trusting Postgres to encode any other type, including integers, booleans, characters, etc.</p>
+      <p>But we don’t trust Postgres enough to do things that could lead to out-of-bounds access. That means hpgsql always checks bounds before reading from our internal buffers. It’s not clear how much faster we’d be if we trusted Postgres enough to omit bounds checks, but it’s not something I want for hpgsql.</p>
+      <h2 id="loc-5">ByteStrings, <code>unsafePerformIO</code> and unnecessary boxing</h2>
+      <p>At some point I implemented my own <code>PinnedByteArray</code> type instead of using <code>ByteString</code>. The need for it was only discovered by looking at GHC Core. At the time, my decoders used <span class="hover-tip"><span class="tip-trigger"><a href="https://hackage.haskell.org/package/base/docs/System-IO-Unsafe.html#v:unsafePerformIO">unsafeDupablePerformIO</a></span> <span class="tip-popup">unsafeDupablePerformIO :: IO a -> a</span></span> so they could <span class="hover-tip"><span class="tip-trigger"><a href="https://hackage.haskell.org/package/base/docs/Foreign-Storable.html#v:peek">peek</a></span> <span class="tip-popup">peek :: Storable a => Ptr a -> IO a</span></span> directly into the ByteString in pure code, and that had very surprising consequences to me.</p>
+      <p>The problem was that <code>unsafeDupablePerformIO</code> (and its variants like <code>unsafePerformIO</code>) uses the <span class="hover-tip"><span class="tip-trigger"><a href="https://hackage.haskell.org/package/base/docs/GHC-Base.html#v:lazy">lazy</a></span> <span class="tip-popup">lazy :: a -> a</span></span> function, which imposes an optimization fence to GHC’s inliner. This fence was boxing every peeked <code>Word32#</code> into a <code>Word32</code> before decoding it into e.g. an <code>Int</code>. That is unnecessary boxing, as ideally we’d go from <code>Word32#</code> directly to <code>Int</code>.</p>
+      <p><code>ByteString</code> is a <code>ForeignPtr Word8</code> under the hood, and I then wondered why <span class="hover-tip"><span class="tip-trigger"><a href="https://hackage.haskell.org/package/base/docs/Foreign-ForeignPtr.html#v:withForeignPtr">withForeignPtr</a></span> <span class="tip-popup">withForeignPtr :: ForeignPtr a -> (Ptr a -> IO b) -> IO b</span></span> needs to run in <code>IO</code> if it’s just peeking into memory positions. The docs say that “The foreign object is kept alive at least during the whole action”, which is maybe the reason why.</p>
+      <p>This surprised me very much since <code>ByteString</code> is an ecosystem default, and since so much code uses it to decode it into something else. So IIUC there’s no way to write a byte-peeking decoder like hpgsql’s without running into things like this with <code>ByteString</code>. But I hope I’m wrong about that, and I did consider one idea to keep <code>ByteString</code>, which you can see <a href="https://github.com/mzabani/hpgsql/blob/3df8f34f1bbda0fa53b0ac985dc8bb58bd781342/hpgsql/src/Hpgsql/Internal/PinnedByteArray.hs#L38">in a code comment</a>.</p>
+      <p>My solution was to write my own <code>PinnedByteArray</code> type, using <code>ByteArray#</code> under the hood, and change networking and parsing code to use that instead. One can then use the less friendly, but pure, <span class="hover-tip"><span class="tip-trigger"><a href="https://hackage.haskell.org/package/base/docs/GHC-Base.html#v:indexWord8ArrayAsWord32-35-">indexWord8ArrayAsWord32#</a></span> <span class="tip-popup">indexWord8ArrayAsWord32# :: ByteArray# -> Int# -> Word32#</span></span> and similar functions, to peek directly into buffers in pure code, and with that avoid boxing overhead.</p>
+      <p>It’s not great that I had to reimplement so much code - I even had to introduce a <code>LazyPinnedByteArray</code> - and I wondered if backpack would’ve helped me switch from <code>bytestring</code> to a hypothetical <code>pinnedbytestring</code> module without changing my code all that much. Other libraries would’ve had to expose backpack support too, like <code>network</code> and <code>attoparsec</code> (I also had to create small parsing module for <code>PinnedByteArray</code>), and <em>even then</em> I already have copies of <code>network</code>’s functions because I had to make them interruption-safe for my use, so it wouldn’t work out of the box.</p>
+      <p>So it’s all a bit messy, but I do think backpack support in the ecosystem would at least have made parts of my code unnecessary, and maybe I could upstream interruption-safety support to the <code>network</code> library and get rid of lots of code duplication I had to add.</p>
+      <p>So maybe this section is more about backpack than anything else. Stack recently announced it will support it, so it might be time for library authors to pick it up? hpgsql itself could leave the choice of streaming library to users, for example.</p>
+      <h2 id="loc-6">Why is materializing List and Vector so slow?</h2>
+      <p>Here’s how long the same benchmark takes, changing only whether we stream the rows and discard them immediately (i.e. consume a <code>Stream (Of a) IO ()</code>), vs. store them in a list (i.e. produce a <code>IO [a]</code>):</p>
+      <ul>
+        <li>Streaming and discarding rows: 1.139s</li>
+        <li>Materializing rows to a list: 3.057s</li>
+      </ul>
+      <p>That’s a 2.7x increase. .NET’s Npgsql goes from 1.167s to 1.181s, and tokio-postgres goes from 1.032s to 1.092s.</p>
+      <p>I even tried materializing to a <code>Vector</code> with a mutable size-doubling <code>Vector</code> algorithm, just in case I had something wrong with List concatenation, but times didn’t improve.</p>
+      <p>I double-checked that I’m forcing each individual record returned in the query, so <strong>I don’t know how to explain this.</strong></p>
+      <p>One thing that did occur to me is that it’d be great if I could use allocation primitives to allocate the returned list and its elements all in a compact region, but without the cost of copying. I’m not betting that would speed this up significantly, by the way.</p>
+      <p>With the compact region, someone might rightfully complain that the GC would keep objects alive a bit longer than necessary in some cases, but the functions that return <code>Stream</code> help avoid that, and you’d still be able to use <code>Streaming.toList_ :: Stream (Of a) IO () -> IO [a]</code> to get the more granular GC behaviour with a list if you want.</p>
+      <p>And this is another thing I wish we did more in the Haskell community: we have wonderful streaming abstractions but it feels like we don’t use them too much. Maybe it’s too much library choice, so another problem for backpack to help solve?</p>
+      <h2 id="loc-7">An experience report on inlining, CPS parsers, boxing, and representation polymorphism</h2>
+      <p>This is the section I want to spend more time on. I really want hpgsql to be as fast as tokio-postgres, and to <strong>try</strong> that I want to remove as many allocations from hpgsql’s decoding pipeline as I can.</p>
+      <p>I should mention that I have been able to remove all boxing from row decoding by inlining a lot of code, because then GHC can really do some magical transformations. It was nice to look at GHC Core and see only unboxed values going all the way down to Record constructors with strict fields. But the end result was <em>slower</em> than the version that boxes. Maybe I made a mistake somewhere, or maybe it’s a complex CPU cache and branch prediction issue given how enormous row decoders become when it’s all inlined. In any case, the size of row decoders becomes too massive, and I don’t want to impose that compilation cost on users of hpgsql.</p>
+      <h3 id="loc-8">CPS parsers aren’t always so great</h3>
+      <p>Let’s start my experience report by looking at a small record and go through my attempts to reduce boxing:</p>
+      <pre><code data-lang="haskell"><span style="color: #859900">data</span> BestCaseScenarioRecord <span style="color: #859900">=</span> BestCaseScenarioRecord
+  { bcsId <span style="color: #859900">::</span> <span style="color: #859900">!</span>Int,
+    <span style="color: #268bd2">bcsDate</span> <span style="color: #859900">::</span> !<span style="color: #b58900">Day</span>,
+    <span style="color: #268bd2">bcsText</span> <span style="color: #859900">::</span> !(<span style="color: #b58900">Maybe</span> <span style="color: #b58900">Text</span>)
+  }
+
+<span style="color: #859900">instance</span> <span style="color: #b58900">FromPgRow</span> <span style="color: #b58900">BestCaseScenarioRecord</span> <span style="color: #859900">where</span>
+  rowDecoder <span style="color: #859900">=</span> BestCaseScenarioRecord <span style="color: #859900">&lt;$></span> fieldRowDecoder <span style="color: #859900">&lt;</span>*<span style="color: #859900">></span> fieldRowDecoder <span style="color: #859900">&lt;</span>*<span style="color: #859900">></span> fieldRowDecoder</code></pre>
+      <p>Let’s look at GHC Core for its row decoder, simplified by myself with Claude’s help (asking Claude to humanize binding names in GHC Core makes reading GHC Core a lot easier and has been really helpful). Hopefully my simplifications aren’t omitting important details:</p>
+      <div style="flex:1; min-width:0;">
+        <div style="background:#fafafa; border:1px solid #ddd;border-radius:6px; padding:10px; font-size:13px; overflow-x:auto;">
+          <pre><code data-lang="hs"><span style="filter: blur(2px); opacity: 0.55;">(<span style="color: #859900">\</span> (@r)</span>
+   (offset <span style="color: #859900">::</span> ByteStringIdx)
+<span style="filter: blur(2px); opacity: 0.55;">   (array <span style="color: #859900">::</span> PinnedByteArray)</span>
+<span style="filter: blur(2px); opacity: 0.55;">   (onFailure <span style="color: #859900">::</span> String <span style="color: #859900">-></span> r)</span>
+<span style="filter: blur(2px); opacity: 0.55;">   (onSuccess</span>
+<span style="filter: blur(2px); opacity: 0.55;">      <span style="color: #859900">::</span> BestCaseScenarioRecord</span>
+<span style="filter: blur(2px); opacity: 0.55;">         <span style="color: #859900">-></span> ByteStringIdx <span style="color: #859900">-></span> PinnedByteArray <span style="color: #859900">-></span> r) <span style="color: #859900">-></span></span>
+   (idParser <span style="color: #859900">::</span> Parser Int)
+<span style="filter: blur(2px); opacity: 0.55;">     offset</span>
+<span style="filter: blur(2px); opacity: 0.55;">     array</span>
+<span style="filter: blur(2px); opacity: 0.55;">     onFailure</span>
+     (<span style="color: #859900">\</span> (idValue <span style="color: #859900">::</span> Int)
+        (offsetAfterId <span style="color: #859900">::</span> ByteStringIdx)
+<span style="filter: blur(2px); opacity: 0.55;">        (array <span style="color: #859900">::</span> PinnedByteArray) <span style="color: #859900">-></span></span>
+        (dayParser <span style="color: #859900">::</span> Parser Day)
+<span style="filter: blur(2px); opacity: 0.55;">          offsetAfterId</span>
+<span style="filter: blur(2px); opacity: 0.55;">          array</span>
+<span style="filter: blur(2px); opacity: 0.55;">          onFailure</span>
+          (<span style="color: #859900">\</span> (dayValue <span style="color: #859900">::</span> Day)
+             (offsetAfterDay <span style="color: #859900">::</span> ByteStringIdx)
+<span style="filter: blur(2px); opacity: 0.55;">             (array <span style="color: #859900">::</span> PinnedByteArray) <span style="color: #859900">-></span></span>
+             (textParser <span style="color: #859900">::</span> Parser (Maybe Text))
+<span style="filter: blur(2px); opacity: 0.55;">               offsetAfterDay</span>
+<span style="filter: blur(2px); opacity: 0.55;">               array</span>
+<span style="filter: blur(2px); opacity: 0.55;">               onFailure</span>
+               (<span style="color: #859900">\</span> (textValue <span style="color: #859900">::</span> Maybe Text)
+                  (offsetAfterText <span style="color: #859900">::</span> ByteStringIdx)
+<span style="filter: blur(2px); opacity: 0.55;">                  (array <span style="color: #859900">::</span> PinnedByteArray) <span style="color: #859900">-></span></span>
+<span style="filter: blur(2px); opacity: 0.55;">                  onSuccess</span>
+                    (<span style="color: #859900">$</span>WBestCaseScenarioRecord idValue dayValue textValue)
+                    offsetAfterText
+<span style="filter: blur(2px); opacity: 0.55;">                    array))))</span>
+<span style="filter: blur(2px); opacity: 0.55;"></span>
+<span style="filter: blur(2px); opacity: 0.55;"></span></code></pre>
+        </div>
+      </div>
+      <p>If we look at all the boxing going on, you will find:</p>
+      <ul>
+        <li><code>ByteStringIdx</code>, a newtyped <code>Int</code> under the hood, is allocated/boxed once per field for the continuations.</li>
+        <li>We have one runtime closure allocated per field. These are the parser continuations for each successfully parsed field.</li>
+        <li>The integer for the <code>bcsId</code> field would ideally be an <code>Int#</code> because strict record fields combined with <a href="https://ghc.gitlab.haskell.org/ghc/doc/users_guide/using-optimisation.html#ghc-flag-funbox-small-strict-fields">-funbox-small-strict-fields</a>, turned on by default with <code>-O1</code>, means we’re discarding the boxed <code>Int</code> anyway. If the other fields were small values like <code>Int</code>, <code>Bool</code>, the same would apply to them.</li>
+      </ul>
+      <p>It took me a few months to realize that, well, CPS style is not so great unless code is sufficiently inlined. <a href="https://github.com/mzabani/hpgsql/pull/63">I changed my parser definition to return a strict equivalent of <code>Either String a</code> instead of being CPS</a>, and <strong>reduced total allocations in my benchmark from 9615MB to 5140MB</strong>, gaining a ~4.7% speedup with it. Looking at GHC Core, it’s easy to see it’s not allocating closures anymore, replacing those allocations with the new <code>data ParseResult a = ParseFail !String | ParseOk !a !ByteStringIdx</code> objects. It doesn’t seem to be an equivalent replacement, however, with CPS being not just more complicated code, but also slower.</p>
+      <p>Compare the GHC Core:</p>
+      <div class="breakout" style="display:flex; gap:14px; font-family: ui-monospace, monospace;">
+        <div style="flex:1; min-width:0;">
+          <div style="font-size:12px; font-weight:bold; color:#666; margin-bottom:6px;">CPS style</div>
+          <div style="background:#fafafa; border:1px solid #ddd;border-radius:6px; padding:10px; font-size:13px; overflow-x:auto;">
+            <pre><code data-lang="hs"><span style="filter: blur(2px); opacity: 0.55;">(<span style="color: #859900">\</span> (@r)</span>
+   (offset <span style="color: #859900">::</span> ByteStringIdx)
+<span style="filter: blur(2px); opacity: 0.55;">   (array <span style="color: #859900">::</span> PinnedByteArray)</span>
+<span style="filter: blur(2px); opacity: 0.55;">   (onFailure <span style="color: #859900">::</span> String <span style="color: #859900">-></span> r)</span>
+<span style="filter: blur(2px); opacity: 0.55;">   (onSuccess</span>
+<span style="filter: blur(2px); opacity: 0.55;">      <span style="color: #859900">::</span> BestCaseScenarioRecord</span>
+<span style="filter: blur(2px); opacity: 0.55;">         <span style="color: #859900">-></span> ByteStringIdx <span style="color: #859900">-></span> PinnedByteArray <span style="color: #859900">-></span> r) <span style="color: #859900">-></span></span>
+   (idParser <span style="color: #859900">::</span> Parser Int)
+<span style="filter: blur(2px); opacity: 0.55;">     offset</span>
+<span style="filter: blur(2px); opacity: 0.55;">     array</span>
+<span style="filter: blur(2px); opacity: 0.55;">     onFailure</span>
+     (<span style="color: #859900">\</span> (idValue <span style="color: #859900">::</span> Int)
+        (offsetAfterId <span style="color: #859900">::</span> ByteStringIdx)
+<span style="filter: blur(2px); opacity: 0.55;">        (array <span style="color: #859900">::</span> PinnedByteArray) <span style="color: #859900">-></span></span>
+        (dayParser <span style="color: #859900">::</span> Parser Day)
+<span style="filter: blur(2px); opacity: 0.55;">          offsetAfterId</span>
+<span style="filter: blur(2px); opacity: 0.55;">          array</span>
+<span style="filter: blur(2px); opacity: 0.55;">          onFailure</span>
+          (<span style="color: #859900">\</span> (dayValue <span style="color: #859900">::</span> Day)
+             (offsetAfterDay <span style="color: #859900">::</span> ByteStringIdx)
+<span style="filter: blur(2px); opacity: 0.55;">             (array <span style="color: #859900">::</span> PinnedByteArray) <span style="color: #859900">-></span></span>
+             (textParser <span style="color: #859900">::</span> Parser (Maybe Text))
+<span style="filter: blur(2px); opacity: 0.55;">               offsetAfterDay</span>
+<span style="filter: blur(2px); opacity: 0.55;">               array</span>
+<span style="filter: blur(2px); opacity: 0.55;">               onFailure</span>
+               (<span style="color: #859900">\</span> (textValue <span style="color: #859900">::</span> Maybe Text)
+                  (offsetAfterText <span style="color: #859900">::</span> ByteStringIdx)
+<span style="filter: blur(2px); opacity: 0.55;">                  (array <span style="color: #859900">::</span> PinnedByteArray) <span style="color: #859900">-></span></span>
+<span style="filter: blur(2px); opacity: 0.55;">                  onSuccess</span>
+                    (<span style="color: #859900">$</span>WBestCaseScenarioRecord idValue dayValue textValue)
+                    offsetAfterText
+<span style="filter: blur(2px); opacity: 0.55;">                    array))))</span>
+<span style="filter: blur(2px); opacity: 0.55;"></span>
+<span style="filter: blur(2px); opacity: 0.55;"></span></code></pre>
+          </div>
+        </div>
+        <div style="flex:1; min-width:0;">
+          <div style="font-size:12px; font-weight:bold; color:#666; margin-bottom:6px;">Direct style (no CPS)</div>
+          <div style="background:#fafafa; border:1px solid #ddd;border-radius:6px; padding:10px; font-size:13px; overflow-x:auto;">
+            <pre><code data-lang="hs"> (<span style="color: #859900">\</span> (offset <span style="color: #859900">::</span> ByteStringIdx) (array <span style="color: #859900">::</span> PinnedByteArray) <span style="color: #859900">-></span>
+    <span style="color: #859900">case</span> idParser offset array
+<span style="filter: blur(2px); opacity: 0.55;">    <span style="color: #859900">of</span> {</span>
+<span style="filter: blur(2px); opacity: 0.55;">      ParseFail idErr <span style="color: #859900">-></span> ParseFail idErr;</span>
+      ParseOk idValue offsetAfterId# <span style="color: #859900">-></span>
+        <span style="color: #859900">case</span> dayParser (I# offsetAfterId#) array
+        <span style="color: #859900">of</span> {
+<span style="filter: blur(2px); opacity: 0.55;">          ParseFail dayErr <span style="color: #859900">-></span> ParseFail dayErr;</span>
+          ParseOk dayValue offsetAfterDay# <span style="color: #859900">-></span>
+            <span style="color: #859900">case</span> textParser (I# offsetAfterDay#) array
+            <span style="color: #859900">of</span> {
+<span style="filter: blur(2px); opacity: 0.55;">              ParseFail textErr <span style="color: #859900">-></span> ParseFail textErr;</span>
+              ParseOk textValue finalOffset# <span style="color: #859900">-></span>
+                <span style="color: #859900">case</span> idValue <span style="color: #859900">of</span> { I# idValue# <span style="color: #859900">-></span>
+                  ParseOk (BestCaseScenarioRecord idValue# dayValue textValue) finalOffset#
+                }
+<span style="filter: blur(2px); opacity: 0.55;">            }</span>
+<span style="filter: blur(2px); opacity: 0.55;">        }</span>
+<span style="filter: blur(2px); opacity: 0.55;">    })</span>
+<span style="filter: blur(2px); opacity: 0.55;"></span></code></pre>
+          </div>
+        </div>
+      </div>
+      <p>It’s much smaller without CPS, and maybe we did reduce some <code>I#</code> allocations due to <code>ParseOk !a !ByteStringIdx</code> having the <code>ByteStringIdx</code> unboxed+unpacked into the <code>ParseOk</code> value, but we can still see some <code>I#</code> allocations for the array offset, which is what we’ll look at next.</p>
+      <p>Always good to benchmark.</p>
+      <h3 id="loc-9">Trying (and failing?) to turn the array offset into an unboxed <code>Int#</code></h3>
+      <p>Next, I couldn’t think how to avoid boxing the values of the record’s fields, but I was adamant <code>ByteStringIdx</code> could just be an unboxed integer. If the decoder decodes an <code>int4</code>, it would call the next field parser with <code>(idx + 4)</code>, passed in the call stack.</p>
+      <p>But changing <code>newtype ByteStringIdx = ByteStringIdx Int</code> to <code>type ByteStringIdx = Int#</code> proved very invasive and difficult, at least with my Haskell skills. This was one of my first real experiences with representation polymorphism in GHC. I learned that I can make function arguments representation-polymorphic, but not data constructors’ arguments. I wonder if that’s because GHC doesn’t monomorphize completely, but I thought why not monomorphize completely based on call sites in such cases? I imagine with class dictionaries and public functions with unknown call sites things might get more complicated, but compilers aren’t my forte.</p>
+      <p>But also, even number functions like <code>+</code> and <code>-</code> don’t work with unboxed integers because they’re not representation-polymorphic. <code>Ord</code>’s comparison operators are the same. Number literals require a hash at the end, e.g. <code>4#</code> instead of <code>4</code>. Equality is <span class="hover-tip"><span class="tip-trigger"><a href="https://hackage.haskell.org/package/base/docs/GHC-Base.html#v:-61--61--35-">==#</a></span> <span class="tip-popup">(==#) :: Int# -> Int# -> Int#</span></span> and it doesn’t return a <code>Bool</code>, but rather an <code>Int#</code>.</p>
+      <p>In the end, that means switching between <code>Int</code> and <code>Int#</code> is not a quick experiment where you change a few lines of code; it’s actually a bigger refactor.</p>
+      <p>Anyway, after replacing <code>Int</code> with <code>Int#</code> and being somewhat careful to avoid reboxing, performance improved ~4%, but a big surprise: total memory allocation <em>went up</em> from 5140MB to 5900MB in benchmarks. I saw Richard Eisenberg mention this phenomenon in a video, but confusingly to me, GHC Core with the unboxed integer looks strictly better everywhere I looked.</p>
+      <p>Let’s compare the row decoder with boxed and unboxed array offsets first:</p>
+      <div class="breakout" style="display:flex; gap:14px; font-family: ui-monospace, monospace;">
+        <div style="flex:1; min-width:0;">
+          <div style="font-size:12px; font-weight:bold; color:#666; margin-bottom:6px;">Boxed Int</div>
+          <div style="background:#fafafa; border:1px solid #ddd;border-radius:6px; padding:10px; font-size:13px; overflow-x:auto;">
+            <pre><code data-lang="hs"> (<span style="color: #859900">\</span> (offset <span style="color: #859900">::</span> ByteStringIdx) (array <span style="color: #859900">::</span> PinnedByteArray) <span style="color: #859900">-></span>
+<span style="filter: blur(2px); opacity: 0.55;">    <span style="color: #859900">case</span> idParser offset array</span>
+<span style="filter: blur(2px); opacity: 0.55;">    <span style="color: #859900">of</span> {</span>
+<span style="filter: blur(2px); opacity: 0.55;">      ParseFail idErr <span style="color: #859900">-></span> ParseFail idErr;</span>
+<span style="filter: blur(2px); opacity: 0.55;">      ParseOk idValue offsetAfterId# <span style="color: #859900">-></span></span>
+        <span style="color: #859900">case</span> dayParser (I# offsetAfterId#) array
+<span style="filter: blur(2px); opacity: 0.55;">        <span style="color: #859900">of</span> {</span>
+<span style="filter: blur(2px); opacity: 0.55;">          ParseFail dayErr <span style="color: #859900">-></span> ParseFail dayErr;</span>
+<span style="filter: blur(2px); opacity: 0.55;">          ParseOk dayValue offsetAfterDay# <span style="color: #859900">-></span></span>
+            <span style="color: #859900">case</span> textParser (I# offsetAfterDay#) array
+<span style="filter: blur(2px); opacity: 0.55;">            <span style="color: #859900">of</span> {</span>
+<span style="filter: blur(2px); opacity: 0.55;">              ParseFail textErr <span style="color: #859900">-></span> ParseFail textErr;</span>
+<span style="filter: blur(2px); opacity: 0.55;">              ParseOk textValue finalOffset# <span style="color: #859900">-></span></span>
+<span style="filter: blur(2px); opacity: 0.55;">                <span style="color: #859900">case</span> idValue <span style="color: #859900">of</span> { I# idValue# <span style="color: #859900">-></span></span>
+<span style="filter: blur(2px); opacity: 0.55;">                  ParseOk (BestCaseScenarioRecord idValue# dayValue textValue) finalOffset#</span>
+<span style="filter: blur(2px); opacity: 0.55;">                }</span>
+<span style="filter: blur(2px); opacity: 0.55;">            }</span>
+<span style="filter: blur(2px); opacity: 0.55;">        }</span>
+<span style="filter: blur(2px); opacity: 0.55;">    })</span>
+<span style="filter: blur(2px); opacity: 0.55;"></span></code></pre>
+          </div>
+        </div>
+        <div style="flex:1; min-width:0;">
+          <div style="font-size:12px; font-weight:bold; color:#666; margin-bottom:6px;">Unboxed Int#</div>
+          <div style="background:#fafafa; border:1px solid #ddd;border-radius:6px; padding:10px; font-size:13px; overflow-x:auto;">
+            <pre><code data-lang="hs"> (<span style="color: #859900">\</span> (offset <span style="color: #859900">::</span> ByteStringIdx) (array <span style="color: #859900">::</span> PinnedByteArray) <span style="color: #859900">-></span>
+<span style="filter: blur(2px); opacity: 0.55;">    <span style="color: #859900">case</span> idParser offset array</span>
+<span style="filter: blur(2px); opacity: 0.55;">    <span style="color: #859900">of</span> {</span>
+<span style="filter: blur(2px); opacity: 0.55;">      ParseFail idErr <span style="color: #859900">-></span> ParseFail idErr;</span>
+<span style="filter: blur(2px); opacity: 0.55;">      ParseOk idValue offsetAfterId# <span style="color: #859900">-></span></span>
+        <span style="color: #859900">case</span> dayParser offsetAfterId# array
+<span style="filter: blur(2px); opacity: 0.55;">        <span style="color: #859900">of</span> {</span>
+<span style="filter: blur(2px); opacity: 0.55;">          ParseFail dayErr <span style="color: #859900">-></span> ParseFail dayErr;</span>
+<span style="filter: blur(2px); opacity: 0.55;">          ParseOk dayValue offsetAfterDay# <span style="color: #859900">-></span></span>
+            <span style="color: #859900">case</span> textParser offsetAfterDay# array
+<span style="filter: blur(2px); opacity: 0.55;">            <span style="color: #859900">of</span> {</span>
+<span style="filter: blur(2px); opacity: 0.55;">              ParseFail textErr <span style="color: #859900">-></span> ParseFail textErr;</span>
+<span style="filter: blur(2px); opacity: 0.55;">              ParseOk textValue finalOffset# <span style="color: #859900">-></span></span>
+<span style="filter: blur(2px); opacity: 0.55;">                <span style="color: #859900">case</span> idValue <span style="color: #859900">of</span> { I# idValue# <span style="color: #859900">-></span></span>
+<span style="filter: blur(2px); opacity: 0.55;">                ParseOk (BestCaseScenarioRecord idValue# dayValue textValue) finalOffset#</span>
+<span style="filter: blur(2px); opacity: 0.55;">                }</span>
+<span style="filter: blur(2px); opacity: 0.55;">            }</span>
+<span style="filter: blur(2px); opacity: 0.55;">        }</span>
+<span style="filter: blur(2px); opacity: 0.55;">    })</span>
+<span style="filter: blur(2px); opacity: 0.55;"></span></code></pre>
+          </div>
+        </div>
+      </div>
+      <p>Look at all the <code>I#</code> constructions in the Boxed Int (left) version. Everything else is the same, so the Unboxed Int# version should allocate strictly less.</p>
+      <p>Now let’s pick a field decoder, as maybe those got worse. Let’s look at the <code>Bool</code> decoder:</p>
+      <div class="breakout" style="display:flex; gap:14px; font-family: ui-monospace, monospace;">
+        <div style="flex:1; min-width:0;">
+          <div style="font-size:12px; font-weight:bold; color:#666; margin-bottom:6px;">Boxed Int</div>
+          <div style="background:#fafafa; border:1px solid #ddd;border-radius:6px; padding:10px; font-size:13px; overflow-x:auto;">
+            <pre><code data-lang="hs"><span style="color: #859900">\</span>(decodeBool [OS<span style="color: #859900">=</span>OneShot]
+       <span style="color: #859900">::</span> ByteStringIdx <span style="color: #859900">-></span> PinnedByteArray <span style="color: #859900">-></span> ParseResult Bool)
+    (offset <span style="color: #859900">::</span> ByteStringIdx)
+    (array <span style="color: #859900">::</span> PinnedByteArray) <span style="color: #859900">-></span>
+    <span style="color: #859900">case</span> offset <span style="color: #859900">of</span>
+    { I# offset# <span style="color: #859900">-></span>
+    <span style="color: #859900">case</span> array <span style="color: #859900">of</span> array
+    { PinnedByteArray baseOffset length rawBytes <span style="color: #859900">-></span>
+    <span style="color: #859900">case</span> <span style="color: #859900">&lt;</span># length (<span style="color: #859900">+</span># <span style="color: #2aa198">4</span># offset#) <span style="color: #859900">of</span> {
+<span style="filter: blur(2px); opacity: 0.55;">      __DEFAULT <span style="color: #859900">-></span></span>
+<span style="filter: blur(2px); opacity: 0.55;">        <span style="color: #859900">case</span> indexWord8ArrayAsWord32#</span>
+<span style="filter: blur(2px); opacity: 0.55;">               rawBytes (<span style="color: #859900">+</span># offset# baseOffset)</span>
+<span style="filter: blur(2px); opacity: 0.55;">        <span style="color: #859900">of</span> rawLengthWord</span>
+<span style="filter: blur(2px); opacity: 0.55;">        { __DEFAULT <span style="color: #859900">-></span></span>
+<span style="filter: blur(2px); opacity: 0.55;">        <span style="color: #859900">let</span> {</span>
+<span style="filter: blur(2px); opacity: 0.55;">          offsetAfterLength# <span style="color: #859900">::</span> Int#</span>
+<span style="filter: blur(2px); opacity: 0.55;">          [LclId]</span>
+<span style="filter: blur(2px); opacity: 0.55;">          offsetAfterLength# <span style="color: #859900">=</span> <span style="color: #859900">+</span># offset# <span style="color: #2aa198">4</span># } <span style="color: #859900">in</span></span>
+<span style="filter: blur(2px); opacity: 0.55;">        <span style="color: #859900">case</span> int32ToInt#</span>
+<span style="filter: blur(2px); opacity: 0.55;">               (word32ToInt32#</span>
+<span style="filter: blur(2px); opacity: 0.55;">                  (wordToWord32# (byteSwap32# (word32ToWord# rawLengthWord))))</span>
+<span style="filter: blur(2px); opacity: 0.55;">        <span style="color: #859900">of</span> {</span>
+<span style="filter: blur(2px); opacity: 0.55;">          __DEFAULT <span style="color: #859900">-></span></span>
+<span style="filter: blur(2px); opacity: 0.55;">            <span style="color: #859900">case</span> <span style="color: #859900">&lt;</span># length (<span style="color: #859900">+</span># <span style="color: #2aa198">1</span># offsetAfterLength#) <span style="color: #859900">of</span> {</span>
+<span style="filter: blur(2px); opacity: 0.55;">              __DEFAULT <span style="color: #859900">-></span></span>
+<span style="filter: blur(2px); opacity: 0.55;">                <span style="color: #859900">case</span> indexWord8Array# rawBytes (<span style="color: #859900">+</span># offsetAfterLength# baseOffset)</span>
+<span style="filter: blur(2px); opacity: 0.55;">                <span style="color: #859900">of</span> valueByte</span>
+<span style="filter: blur(2px); opacity: 0.55;">                { __DEFAULT <span style="color: #859900">-></span></span>
+                <span style="color: #859900">case</span> word8ToWord# valueByte <span style="color: #859900">of</span> {
+                  __DEFAULT <span style="color: #859900">-></span> ParseOk False (<span style="color: #859900">+</span># offsetAfterLength# <span style="color: #2aa198">1</span>#);
+                  <span style="color: #2aa198">1</span>## <span style="color: #859900">-></span> ParseOk True (<span style="color: #859900">+</span># offsetAfterLength# <span style="color: #2aa198">1</span>#)
+<span style="filter: blur(2px); opacity: 0.55;">                }</span>
+<span style="filter: blur(2px); opacity: 0.55;">                };</span>
+<span style="filter: blur(2px); opacity: 0.55;">              <span style="color: #2aa198">1</span># <span style="color: #859900">-></span> outOfBoundsFailure</span>
+<span style="filter: blur(2px); opacity: 0.55;">            };</span>
+          <span style="color: #859900">-</span><span style="color: #2aa198">1</span># <span style="color: #859900">-></span>
+            decodeBool
+              (I# offsetAfterLength#) array
+<span style="filter: blur(2px); opacity: 0.55;">        }</span>
+<span style="filter: blur(2px); opacity: 0.55;">        };</span>
+<span style="filter: blur(2px); opacity: 0.55;">      <span style="color: #2aa198">1</span># <span style="color: #859900">-></span> outOfBoundsFailure</span>
+<span style="filter: blur(2px); opacity: 0.55;">    }</span>
+<span style="filter: blur(2px); opacity: 0.55;">    }</span>
+<span style="filter: blur(2px); opacity: 0.55;">    }</span>
+<span style="filter: blur(2px); opacity: 0.55;"></span></code></pre>
+          </div>
+        </div>
+        <div style="flex:1; min-width:0;">
+          <div style="font-size:12px; font-weight:bold; color:#666; margin-bottom:6px;">Unboxed Int#</div>
+          <div style="background:#fafafa; border:1px solid #ddd;border-radius:6px; padding:10px; font-size:13px; overflow-x:auto;">
+            <pre><code data-lang="hs"><span style="color: #859900">\</span>(offset# <span style="color: #859900">::</span> ByteStringIdx) (array <span style="color: #859900">::</span> PinnedByteArray) <span style="color: #859900">-></span>
+<span style="filter: blur(2px); opacity: 0.55;"></span>
+<span style="filter: blur(2px); opacity: 0.55;"></span>
+<span style="filter: blur(2px); opacity: 0.55;"></span>
+<span style="filter: blur(2px); opacity: 0.55;"></span>
+<span style="filter: blur(2px); opacity: 0.55;">    </span>
+  <span style="color: #859900">case</span> array <span style="color: #859900">of</span>
+  { PinnedByteArray baseOffset length rawBytes <span style="color: #859900">-></span>
+  <span style="color: #859900">case</span> <span style="color: #859900">&lt;</span># length (<span style="color: #859900">+</span># <span style="color: #2aa198">4</span># offset#) <span style="color: #859900">of</span> {
+<span style="filter: blur(2px); opacity: 0.55;">    __DEFAULT <span style="color: #859900">-></span></span>
+<span style="filter: blur(2px); opacity: 0.55;">      <span style="color: #859900">case</span> indexWord8ArrayAsWord32#</span>
+<span style="filter: blur(2px); opacity: 0.55;">             rawBytes (<span style="color: #859900">+</span># offset# baseOffset)</span>
+<span style="filter: blur(2px); opacity: 0.55;">      <span style="color: #859900">of</span> rawLengthWord</span>
+<span style="filter: blur(2px); opacity: 0.55;">      { __DEFAULT <span style="color: #859900">-></span></span>
+<span style="filter: blur(2px); opacity: 0.55;">      <span style="color: #859900">let</span> {</span>
+<span style="filter: blur(2px); opacity: 0.55;">        offsetAfterLength# <span style="color: #859900">::</span> ByteStringIdx</span>
+<span style="filter: blur(2px); opacity: 0.55;">        [LclId]</span>
+<span style="filter: blur(2px); opacity: 0.55;">        offsetAfterLength# <span style="color: #859900">=</span> <span style="color: #859900">+</span># offset# <span style="color: #2aa198">4</span># } <span style="color: #859900">in</span></span>
+<span style="filter: blur(2px); opacity: 0.55;">      <span style="color: #859900">case</span> int32ToInt#</span>
+<span style="filter: blur(2px); opacity: 0.55;">             (word32ToInt32#</span>
+<span style="filter: blur(2px); opacity: 0.55;">                (wordToWord32# (byteSwap32# (word32ToWord# rawLengthWord))))</span>
+<span style="filter: blur(2px); opacity: 0.55;">      <span style="color: #859900">of</span> {</span>
+<span style="filter: blur(2px); opacity: 0.55;">        __DEFAULT <span style="color: #859900">-></span></span>
+<span style="filter: blur(2px); opacity: 0.55;">          <span style="color: #859900">case</span> <span style="color: #859900">&lt;</span># length (<span style="color: #859900">+</span># <span style="color: #2aa198">1</span># offsetAfterLength#) <span style="color: #859900">of</span> {</span>
+<span style="filter: blur(2px); opacity: 0.55;">            __DEFAULT <span style="color: #859900">-></span></span>
+<span style="filter: blur(2px); opacity: 0.55;">              <span style="color: #859900">case</span> indexWord8Array# rawBytes (<span style="color: #859900">+</span># offsetAfterLength# baseOffset)</span>
+<span style="filter: blur(2px); opacity: 0.55;">              <span style="color: #859900">of</span> valueByte</span>
+<span style="filter: blur(2px); opacity: 0.55;">              { __DEFAULT <span style="color: #859900">-></span></span>
+              <span style="color: #859900">case</span> word8ToWord# valueByte <span style="color: #859900">of</span> {
+                __DEFAULT <span style="color: #859900">-></span> ParseOk False (<span style="color: #859900">+</span># offsetAfterLength# <span style="color: #2aa198">1</span>#);
+                <span style="color: #2aa198">1</span>## <span style="color: #859900">-></span> ParseOk True (<span style="color: #859900">+</span># offsetAfterLength# <span style="color: #2aa198">1</span>#)
+<span style="filter: blur(2px); opacity: 0.55;">              }</span>
+<span style="filter: blur(2px); opacity: 0.55;">              };</span>
+<span style="filter: blur(2px); opacity: 0.55;">            <span style="color: #2aa198">1</span># <span style="color: #859900">-></span> outOfBoundsFailure</span>
+<span style="filter: blur(2px); opacity: 0.55;">          };</span>
+        <span style="color: #859900">-</span><span style="color: #2aa198">1</span># <span style="color: #859900">-></span> unexpectedNullFailure
+<span style="filter: blur(2px); opacity: 0.55;">      }</span>
+<span style="filter: blur(2px); opacity: 0.55;">      };</span>
+<span style="filter: blur(2px); opacity: 0.55;">    <span style="color: #2aa198">1</span># <span style="color: #859900">-></span> outOfBoundsFailure</span>
+<span style="filter: blur(2px); opacity: 0.55;">  }</span>
+<span style="filter: blur(2px); opacity: 0.55;">  })</span>
+<span style="filter: blur(2px); opacity: 0.55;"></span></code></pre>
+          </div>
+        </div>
+      </div>
+      <p>I’ve emphasized the more interesting parts. First look at the top lines of the left version (boxed). There, <code>offset</code> is an <code>Int</code> that needs to be unboxed, and naturally callers of this must box an <code>Int</code>. The unboxed version also receives a <code>decodeBool</code> function that it uses to invoke parsing failure on a <code>NULL</code> value. The right version (unboxed) is a bit more direct.</p>
+      <p>It looks to me that the Unboxed Int# version is strictly better.</p>
+      <p>So if both the row decoder and field decoders do strictly less boxing and are otherwise identical, how come the unboxed version allocates so much more? Maybe the field decoders for other types got worse; but an exhaustive comparison requires more effort than I want to put in right now.</p>
+      <p>Also, when I tried this with the CPS parser (instead of the simple parser), it’s not just total allocated memory that got worse; performance got significantly worse, too.</p>
+      <p><a href="https://github.com/mzabani/hpgsql/pull/65">I have not merged this change into hpgsql</a> as I’d rather wait until I better understand what’s happening. This was tested with GHC 9.10.3 and -O1.</p>
+      <p>I was sadly unable to run with profiling on with my nixpkgs tooling. The next step is to analyze a heap profile.</p>
+      <h3 id="loc-10">The dream optimizations working together</h3>
+      <p>Lastly, after looking at GHC Core enough, I wondered if we could unbox at least the small fields, like <code>Int</code>. I considered extravagant ideas, but finally wondered about worker-wrapper transformations.</p>
+      <p>Let’s look at the GHC Core for the row decoder for <span class="hover-tip"><span class="tip-trigger">BestCaseScenarioRecord</span> <span class="tip-popup">data BestCaseScenarioRecord = BestCaseScenarioRecord { bcsId :: !Int, bcsDate :: !Day, bcsText :: !(Maybe Text) }</span></span> one more time:</p>
+      <pre><code data-lang="haskell"> (<span style="color: #859900">\</span> (offset <span style="color: #859900">::</span> ByteStringIdx) (array <span style="color: #859900">::</span> PinnedByteArray) <span style="color: #859900">-></span>
+    <span style="color: #859900">case</span> idParser offset array
+    <span style="color: #859900">of</span> {
+      ParseFail idErr <span style="color: #859900">-></span> ParseFail idErr;
+      ParseOk idValue offsetAfterId# <span style="color: #859900">-></span>
+        <span style="color: #859900">case</span> dayParser (I# offsetAfterId#) array
+        <span style="color: #859900">of</span> {
+          ParseFail dayErr <span style="color: #859900">-></span> ParseFail dayErr;
+          ParseOk dayValue offsetAfterDay# <span style="color: #859900">-></span>
+            <span style="color: #859900">case</span> textParser (I# offsetAfterDay#) array
+            <span style="color: #859900">of</span> {
+              ParseFail textErr <span style="color: #859900">-></span> ParseFail textErr;
+              ParseOk textValue finalOffset# <span style="color: #859900">-></span>
+                <span style="color: #859900">case</span> idValue <span style="color: #859900">of</span> { I# idValue# <span style="color: #859900">-></span>
+                  ParseOk (BestCaseScenarioRecord idValue# dayValue textValue) finalOffset#
+                }
+            }
+        }
+    })
+</code></pre>
+      <p>Here’s the dream, but do forgive me for possibly making assumptions about what a compiler might be able to do: worker-wrapper transformations produce unboxed equivalents of parsers, i.e. <code>Parser Int#</code> instead of <code>Parser Int</code>, and those get picked up by the compiler in the code above because they end up in a record with strict fields (so we’d see an <code>idValue# :: Int#</code> instead of <code>idValue :: Int</code> in the GHC Core above), at least when <a href="https://ghc.gitlab.haskell.org/ghc/doc/users_guide/using-optimisation.html#ghc-flag-funbox-small-strict-fields">-funbox-small-strict-fields</a> is on.</p>
+      <p>I imagine that might require quite a bit of work in representation polymorphism, and even then I won’t be surprised if people tell me it’s infeasible.</p>
+      <p>But it occurred to me. And if the dream goal is too far (is it?), maybe we could at least make representation polymorphism easier little by little? I found discussions which are well beyond my level of experience and expertise to judge, but from the immense complexity (to me) of tradeoffs and proposals, I wonder if we could at least gradually make more base classes and functions levity-polymorphic or even completely representation-polymorphic, like was done to <span class="hover-tip"><span class="tip-trigger"><a href="https://hackage.haskell.org/package/base/docs/Prelude.html#v:-36-">$</a></span> <span class="tip-popup">($) :: forall repa repb (a :: TYPE repa) (b :: TYPE repb). (a -> b) -> a -> b</span></span>? Is it “just” that it requires effort, or are there tradeoffs there, too?</p>
+      <h2 id="loc-11">Conclusion</h2>
+      <p>I’m not a Haskell type system or GHC expert, so maybe my hardships with these experiments should be taken with a grain of salt. But I believe I’m also far from a beginner, and found some of these changes genuinely difficult to make and reason about.</p>
+      <p>I thought maybe I could propose that we make representation-polymorphic all methods for <code>Num</code>, <code>Ord</code>, and <code>Eq</code>, and maybe even make numeric literals representation polymorphic? I am sort of hoping someone more experienced will tell me to do it or tell me why it wouldn’t fly (special treatment of <code>$</code> in GHC?).</p>
+      <p>Also, the hpgsql repository has benchmarks that are easy to run in case people want to try out performance improvements themselves. Just clone the repo, enter the Nix shell and run <code>run bench-single -- --match "hpgsql Record Stream"</code>.</p>
+    </main>
+  </body>
+</html>

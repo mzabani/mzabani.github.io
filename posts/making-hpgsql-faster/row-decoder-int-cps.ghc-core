@@ -1,0 +1,33 @@
+(\ (@r)
+   (offset :: ByteStringIdx)
+   (array :: PinnedByteArray)
+   (onFailure :: String -> r)
+   (onSuccess
+      :: BestCaseScenarioRecord
+         -> ByteStringIdx -> PinnedByteArray -> r) ->
+   (idParser :: Parser Int)
+     offset
+     array
+     onFailure
+     (\ (idValue :: Int)
+        (offsetAfterId :: ByteStringIdx)
+        (array :: PinnedByteArray) ->
+        (dayParser :: Parser Day)
+          offsetAfterId
+          array
+          onFailure
+          (\ (dayValue :: Day)
+             (offsetAfterDay :: ByteStringIdx)
+             (array :: PinnedByteArray) ->
+             (textParser :: Parser (Maybe Text))
+               offsetAfterDay
+               array
+               onFailure
+               (\ (textValue :: Maybe Text)
+                  (offsetAfterText :: ByteStringIdx)
+                  (array :: PinnedByteArray) ->
+                  onSuccess
+                    ($WBestCaseScenarioRecord idValue dayValue textValue)
+                    offsetAfterText
+                    array))))
+

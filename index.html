@@ -125,9 +125,9 @@
       }
       header .logo a { font-weight: bold; font-size: 1.1rem; text-decoration: none; color: var(--fg); }
       header nav a { margin-left: 1rem; text-decoration: none; font-weight: bold; text-transform: uppercase; font-size: 0.9rem; color: var(--fg); }
-      h1 { font-size: 1.6rem; margin-bottom: 0.25rem; }
-      h2 { font-size: 1.3rem; margin-top: 2rem; }
-      h3 { font-size: 1.1rem; }
+      h1 { font-size: 2rem; margin-bottom: 0.25rem; }
+      h2 { font-size: 1.6rem; margin-top: 2rem; }
+      h3 { font-size: 1.3rem; }
       .info { color: var(--muted); font-size: 0.85rem; font-style: italic; margin-bottom: 1.5rem; }
       pre {
         background: var(--code-bg);
@@ -152,6 +152,60 @@
         text-align: right;
       }
       section[role="doc-endnotes"] { border-top: 1px solid var(--border); margin-top: 2rem; padding-top: 0.5rem; font-size: 0.9rem; color: var(--muted); }
+      .breakout {
+        box-sizing: border-box;
+        width: 100vw;
+        max-width: 1200px;
+        padding: 0 1.25rem;
+        position: relative;
+        left: 50%;
+        transform: translateX(-50%);
+      }
+      @media (max-width: 768px) {
+        .breakout {
+          width: 100%;
+          max-width: 100%;
+          position: static;
+          left: auto;
+          transform: none;
+        }
+      }
+      nav[role="doc-toc"] {
+        background: var(--code-bg);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 0.75rem 1.25rem;
+        margin: 1.5rem 0;
+      }
+      nav[role="doc-toc"] ol { margin: 0.25rem 0; padding-left: 1.25rem; }
+      nav[role="doc-toc"] > ol { padding-left: 0; }
+      nav[role="doc-toc"] li { margin: 0.25rem 0; }
+      nav[role="doc-toc"] a { text-decoration: none; }
+      nav[role="doc-toc"] a:hover { text-decoration: underline; }
+      .hover-tip { position: relative; }
+      .hover-tip .tip-trigger {
+        border-bottom: 1px dotted var(--muted);
+        cursor: help;
+      }
+      .hover-tip .tip-popup {
+        display: none;
+        position: absolute;
+        left: 0;
+        bottom: 125%;
+        background: var(--bg);
+        color: var(--fg);
+        border: 1px solid var(--border);
+        padding: 0.35rem 0.6rem;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        line-height: 1.4;
+        white-space: normal;
+        width: max-content;
+        max-width: 320px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+        z-index: 10;
+      }
+      .hover-tip:hover .tip-popup { display: block; }
     </style>
     <header>
       <span class="logo"><a href="#">Marcelo Zabani’s Blog</a></span>
@@ -164,6 +218,7 @@
       <p>Older posts are on my Wordpress at <a href="https://mzabani.wordpress.com/">https://mzabani.wordpress.com/</a></p>
       <h2>Posts</h2>
       <ul id="post-list">
+        <li><a href="./posts/making-hpgsql-faster.html">Closing the performance gap between hpgsql (Haskell) and tokio-postgres (Rust)</a> - November 15, 2026</li>
         <li><a href="./posts/2025-02-12-concurrently-forcing-haskell-streams.html">Concurrently processing streams in Haskell</a> - February 12, 2025</li>
         <li><a href="./posts/2024-12-08-pg-ssi-limitations.html">Limitations of SSI’s implementation in PostgreSQL</a> - December 8, 2024</li>
         <li><a href="./posts/2024-11-20-pg-what-serializable-isolation-really-means.html">What Serializable isolation really means in PostgreSQL</a> - November 20, 2024</li>

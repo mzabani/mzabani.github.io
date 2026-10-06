@@ -1,0 +1,41 @@
+\(offset# :: ByteStringIdx) (array :: PinnedByteArray) ->
+
+
+
+
+    
+  case array of
+  { PinnedByteArray baseOffset length rawBytes ->
+  case <# length (+# 4# offset#) of {
+    __DEFAULT ->
+      case indexWord8ArrayAsWord32#
+             rawBytes (+# offset# baseOffset)
+      of rawLengthWord
+      { __DEFAULT ->
+      let {
+        offsetAfterLength# :: ByteStringIdx
+        [LclId]
+        offsetAfterLength# = +# offset# 4# } in
+      case int32ToInt#
+             (word32ToInt32#
+                (wordToWord32# (byteSwap32# (word32ToWord# rawLengthWord))))
+      of {
+        __DEFAULT ->
+          case <# length (+# 1# offsetAfterLength#) of {
+            __DEFAULT ->
+              case indexWord8Array# rawBytes (+# offsetAfterLength# baseOffset)
+              of valueByte
+              { __DEFAULT ->
+              case word8ToWord# valueByte of {
+                __DEFAULT -> ParseOk False (+# offsetAfterLength# 1#);
+                1## -> ParseOk True (+# offsetAfterLength# 1#)
+              }
+              };
+            1# -> outOfBoundsFailure
+          };
+        -1# -> unexpectedNullFailure
+      }
+      };
+    1# -> outOfBoundsFailure
+  }
+  })

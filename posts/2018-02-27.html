@@ -125,9 +125,9 @@
       }
       header .logo a { font-weight: bold; font-size: 1.1rem; text-decoration: none; color: var(--fg); }
       header nav a { margin-left: 1rem; text-decoration: none; font-weight: bold; text-transform: uppercase; font-size: 0.9rem; color: var(--fg); }
-      h1 { font-size: 1.6rem; margin-bottom: 0.25rem; }
-      h2 { font-size: 1.3rem; margin-top: 2rem; }
-      h3 { font-size: 1.1rem; }
+      h1 { font-size: 2rem; margin-bottom: 0.25rem; }
+      h2 { font-size: 1.6rem; margin-top: 2rem; }
+      h3 { font-size: 1.3rem; }
       .info { color: var(--muted); font-size: 0.85rem; font-style: italic; margin-bottom: 1.5rem; }
       pre {
         background: var(--code-bg);
@@ -152,6 +152,60 @@
         text-align: right;
       }
       section[role="doc-endnotes"] { border-top: 1px solid var(--border); margin-top: 2rem; padding-top: 0.5rem; font-size: 0.9rem; color: var(--muted); }
+      .breakout {
+        box-sizing: border-box;
+        width: 100vw;
+        max-width: 1200px;
+        padding: 0 1.25rem;
+        position: relative;
+        left: 50%;
+        transform: translateX(-50%);
+      }
+      @media (max-width: 768px) {
+        .breakout {
+          width: 100%;
+          max-width: 100%;
+          position: static;
+          left: auto;
+          transform: none;
+        }
+      }
+      nav[role="doc-toc"] {
+        background: var(--code-bg);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 0.75rem 1.25rem;
+        margin: 1.5rem 0;
+      }
+      nav[role="doc-toc"] ol { margin: 0.25rem 0; padding-left: 1.25rem; }
+      nav[role="doc-toc"] > ol { padding-left: 0; }
+      nav[role="doc-toc"] li { margin: 0.25rem 0; }
+      nav[role="doc-toc"] a { text-decoration: none; }
+      nav[role="doc-toc"] a:hover { text-decoration: underline; }
+      .hover-tip { position: relative; }
+      .hover-tip .tip-trigger {
+        border-bottom: 1px dotted var(--muted);
+        cursor: help;
+      }
+      .hover-tip .tip-popup {
+        display: none;
+        position: absolute;
+        left: 0;
+        bottom: 125%;
+        background: var(--bg);
+        color: var(--fg);
+        border: 1px solid var(--border);
+        padding: 0.35rem 0.6rem;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        line-height: 1.4;
+        white-space: normal;
+        width: max-content;
+        max-width: 320px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+        z-index: 10;
+      }
+      .hover-tip:hover .tip-popup { display: block; }
     </style>
     <header>
       <span class="logo"><a href="../index.html">Marcelo Zabani’s Blog</a></span>
@@ -484,33 +538,33 @@
       <p>Also, we only need to check up to <math><msub><mi>𝑠</mi><mrow><mo>⌊</mo><mfrac><mi>𝑛</mi><mn>2</mn></mfrac><mo>⌋</mo></mrow></msub><mo lspace="0.2222222222222222em" rspace="0.2222222222222222em">⋅</mo><msub><mi>𝑠</mi><mrow><mi>𝑛</mi><mo lspace="0em" rspace="0em">−</mo><mrow><mo>⌊</mo><mfrac><mi>𝑛</mi><mn>2</mn></mfrac><mo>⌋</mo></mrow></mrow></msub></math>, since every other check is redundant.</p>
       <p>How do we implement this? In a procedural language we could use an array of size n and fill it up with all solutions from 0 to n. In Haskell we generally don’t want to use mutable data structures nor do we want to specify the order of evaluation of things, so we must find another tool in the toolbox to do this; it turns out that lazy evaluation is just that!</p>
       <p>Lazy evaluation is, roughly speaking, a mechanism by which a value is only computed when required by some function. This means that we can define a data structure in terms of itself, and that it can even be infinite. Take the following example:</p>
-      <pre><code data-lang="haskell"><span style="color: #4b69c6">repeat</span> <span style="color: #d73948">::</span> a <span style="color: #d73948">-></span> [a]
-repeat x <span style="color: #d73948">=</span> x <span style="color: #d73948">:</span> repeat x</code></pre>
+      <pre><code data-lang="haskell"><span style="color: #268bd2">repeat</span> <span style="color: #859900">::</span> a <span style="color: #859900">-></span> [a]
+repeat x <span style="color: #859900">=</span> x <span style="color: #859900">:</span> repeat x</code></pre>
       <p>What happens here is that the function repeat takes an object of some type a and returns a possibly infinite list of a. The list will grow in size as more elements of it are demanded by evaluation. Let us take this idea to implement our bestStrategyFunctionBad:</p>
-      <pre><code data-lang="haskell"><span style="color: #74747c">--</span><span style="color: #74747c"> We use the "investment" below to make sure the algorithm always returns some strategy, even if it means leaving your money in the bank</span>
-<span style="color: #4b69c6">investmentLeaveInTheBank</span> <span style="color: #d73948">::</span> <span style="color: #d73948">Investment</span>
-investmentLeaveInTheBank <span style="color: #d73948">=</span> <span style="color: #b60157">Investment</span> { name <span style="color: #d73948">=</span> <span style="color: #198810">"</span><span style="color: #198810">Leave it in the bank account</span><span style="color: #198810">"</span>, rate <span style="color: #d73948">=</span> <span style="color: #b60157">0</span>, taxes <span style="color: #d73948">=</span> <span style="color: #b60157">0</span><span style="color: #b60157">.</span><span style="color: #b60157">0</span>, time <span style="color: #d73948">=</span> <span style="color: #b60157">1</span> }
+      <pre><code data-lang="haskell"><span style="color: #657b83">--</span><span style="color: #657b83"> We use the "investment" below to make sure the algorithm always returns some strategy, even if it means leaving your money in the bank</span>
+<span style="color: #268bd2">investmentLeaveInTheBank</span> <span style="color: #859900">::</span> <span style="color: #b58900">Investment</span>
+investmentLeaveInTheBank <span style="color: #859900">=</span> Investment { name <span style="color: #859900">=</span> <span style="color: #2aa198">"</span><span style="color: #2aa198">Leave it in the bank account</span><span style="color: #2aa198">"</span>, rate <span style="color: #859900">=</span> <span style="color: #2aa198">0</span>, taxes <span style="color: #859900">=</span> <span style="color: #2aa198">0</span><span style="color: #2aa198">.</span><span style="color: #2aa198">0</span>, time <span style="color: #859900">=</span> <span style="color: #2aa198">1</span> }
 
-<span style="color: #4b69c6">withMax</span> <span style="color: #d73948">::</span> <span style="color: #d73948">Ord</span> a <span style="color: #d73948">=></span> (b <span style="color: #d73948">-></span> a) <span style="color: #d73948">-></span> [b] <span style="color: #d73948">-></span> <span style="color: #d73948">Maybe</span> b
-withMax f xs <span style="color: #d73948">=</span> snd maybeRes
-  <span style="color: #d73948">where</span> maybeRes <span style="color: #d73948">=</span> foldl' (<span style="color: #d73948">\</span>acc el <span style="color: #d73948">-></span><span style="color: #d73948">case</span> acc <span style="color: #d73948">of</span>
-    <span style="color: #b60157">Just</span> (maxVal, maxEl) <span style="color: #d73948">-></span> <span style="color: #d73948">let</span> cmp <span style="color: #d73948">=</span> f el <span style="color: #d73948">in</span> <span style="color: #d73948">if</span> cmp <span style="color: #d73948">></span> maxVal <span style="color: #d73948">then</span> <span style="color: #b60157">Just</span> (cmp, el) <span style="color: #d73948">else</span> acc
-    <span style="color: #b60157">Nothing</span> <span style="color: #d73948">-></span> <span style="color: #b60157">Just</span> (f el, el)) <span style="color: #b60157">Nothing</span> xs
+<span style="color: #268bd2">withMax</span> <span style="color: #859900">::</span> <span style="color: #b58900">Ord</span> a <span style="color: #859900">=></span> (b <span style="color: #859900">-></span> a) <span style="color: #859900">-></span> [b] <span style="color: #859900">-></span> <span style="color: #b58900">Maybe</span> b
+withMax f xs <span style="color: #859900">=</span> snd maybeRes
+  <span style="color: #859900">where</span> maybeRes <span style="color: #859900">=</span> foldl' (<span style="color: #859900">\</span>acc el <span style="color: #859900">-></span><span style="color: #859900">case</span> acc <span style="color: #859900">of</span>
+    Just (maxVal, maxEl) <span style="color: #859900">-></span> <span style="color: #859900">let</span> cmp <span style="color: #859900">=</span> f el <span style="color: #859900">in</span> <span style="color: #859900">if</span> cmp <span style="color: #859900">></span> maxVal <span style="color: #859900">then</span> Just (cmp, el) <span style="color: #859900">else</span> acc
+    Nothing <span style="color: #859900">-></span> Just (f el, el)) Nothing xs
 
-<span style="color: #4b69c6">withMax1</span> <span style="color: #d73948">::</span> <span style="color: #d73948">Ord</span> a <span style="color: #d73948">=></span> (b <span style="color: #d73948">-></span> a) <span style="color: #d73948">-></span> b <span style="color: #d73948">-></span> [b] <span style="color: #d73948">-></span> b
-withMax1 f firstEl xs <span style="color: #d73948">=</span> snd <span style="color: #d73948">$</span> foldl' (<span style="color: #d73948">\</span>acc@(maxVal, _) el <span style="color: #d73948">-></span> <span style="color: #d73948">let</span> cmp <span style="color: #d73948">=</span> f el <span style="color: #d73948">in</span> <span style="color: #d73948">if</span> cmp <span style="color: #d73948">></span> maxVal <span style="color: #d73948">then</span> (cmp, el) <span style="color: #d73948">else</span> acc) (f firstEl, firstEl) xs
+<span style="color: #268bd2">withMax1</span> <span style="color: #859900">::</span> <span style="color: #b58900">Ord</span> a <span style="color: #859900">=></span> (b <span style="color: #859900">-></span> a) <span style="color: #859900">-></span> b <span style="color: #859900">-></span> [b] <span style="color: #859900">-></span> b
+withMax1 f firstEl xs <span style="color: #859900">=</span> snd <span style="color: #859900">$</span> foldl' (<span style="color: #859900">\</span>acc@(maxVal, _) el <span style="color: #859900">-></span> <span style="color: #859900">let</span> cmp <span style="color: #859900">=</span> f el <span style="color: #859900">in</span> <span style="color: #859900">if</span> cmp <span style="color: #859900">></span> maxVal <span style="color: #859900">then</span> (cmp, el) <span style="color: #859900">else</span> acc) (f firstEl, firstEl) xs
 
-<span style="color: #4b69c6">bestStrategyBad</span> <span style="color: #d73948">::</span> <span style="color: #d73948">Int</span> <span style="color: #d73948">-></span> [<span style="color: #d73948">Investment</span>] <span style="color: #d73948">-></span> [<span style="color: #d73948">Investment</span>]
-bestStrategyBad timeInYears invs' <span style="color: #d73948">=</span> go <span style="color: #d73948">!!</span> timeInYears
-  <span style="color: #d73948">where</span> invs <span style="color: #d73948">=</span> investmentLeaveInTheBank <span style="color: #d73948">:</span> invs'
-               factorStrategyBad is <span style="color: #d73948">=</span> product <span style="color: #d73948">$</span> fmap factorInvestment is
-               bestStrat desiredTime <span style="color: #d73948">=</span> withMax1 factorStrategyBad (maybeToList (bestInvestmentWithTime desiredTime)) (allCombinations desiredTime)
-               bestInvestmentWithTime desiredTime <span style="color: #d73948">=</span> withMax factorInvestment <span style="color: #d73948">$</span> filter (<span style="color: #d73948">\</span>i <span style="color: #d73948">-></span> time i <span style="color: #d73948">==</span> desiredTime) invs
-               <span style="color: #74747c">--</span><span style="color: #74747c"> For desiredTime=7 "allCombinations" returns strategies e1 ++ e6, e2 ++ e5 and e3 ++ e4</span>
-               allCombinations desiredTime <span style="color: #d73948">=</span> <span style="color: #d73948">let</span> halfTheTime <span style="color: #d73948">=</span> floor (fromIntegral desiredTime <span style="color: #d73948">/</span> <span style="color: #b60157">2</span>)
-                                             <span style="color: #d73948">in</span> fmap (<span style="color: #d73948">\</span>i <span style="color: #d73948">-></span> go <span style="color: #d73948">!!</span> i <span style="color: #d73948">++</span> go <span style="color: #d73948">!!</span> (desiredTime <span style="color: #d73948">-</span> i)) [<span style="color: #b60157">1</span><span style="color: #d73948">..</span>halfTheTime]
-               <span style="color: #4b69c6">go</span> <span style="color: #d73948">::</span> [[<span style="color: #d73948">Investment</span>]]
-               go <span style="color: #d73948">=</span> <span style="color: #d73948">[]</span> <span style="color: #d73948">:</span> fmap bestStrat [<span style="color: #b60157">1</span><span style="color: #d73948">..</span>]</code></pre>
+<span style="color: #268bd2">bestStrategyBad</span> <span style="color: #859900">::</span> <span style="color: #b58900">Int</span> <span style="color: #859900">-></span> [<span style="color: #b58900">Investment</span>] <span style="color: #859900">-></span> [<span style="color: #b58900">Investment</span>]
+bestStrategyBad timeInYears invs' <span style="color: #859900">=</span> go <span style="color: #859900">!!</span> timeInYears
+  <span style="color: #859900">where</span> invs <span style="color: #859900">=</span> investmentLeaveInTheBank <span style="color: #859900">:</span> invs'
+               factorStrategyBad is <span style="color: #859900">=</span> product <span style="color: #859900">$</span> fmap factorInvestment is
+               bestStrat desiredTime <span style="color: #859900">=</span> withMax1 factorStrategyBad (maybeToList (bestInvestmentWithTime desiredTime)) (allCombinations desiredTime)
+               bestInvestmentWithTime desiredTime <span style="color: #859900">=</span> withMax factorInvestment <span style="color: #859900">$</span> filter (<span style="color: #859900">\</span>i <span style="color: #859900">-></span> time i <span style="color: #859900">==</span> desiredTime) invs
+               <span style="color: #657b83">--</span><span style="color: #657b83"> For desiredTime=7 "allCombinations" returns strategies e1 ++ e6, e2 ++ e5 and e3 ++ e4</span>
+               allCombinations desiredTime <span style="color: #859900">=</span> <span style="color: #859900">let</span> halfTheTime <span style="color: #859900">=</span> floor (fromIntegral desiredTime <span style="color: #859900">/</span> <span style="color: #2aa198">2</span>)
+                                             <span style="color: #859900">in</span> fmap (<span style="color: #859900">\</span>i <span style="color: #859900">-></span> go <span style="color: #859900">!!</span> i <span style="color: #859900">++</span> go <span style="color: #859900">!!</span> (desiredTime <span style="color: #859900">-</span> i)) [<span style="color: #2aa198">1</span><span style="color: #859900">..</span>halfTheTime]
+               <span style="color: #268bd2">go</span> <span style="color: #859900">::</span> [[<span style="color: #b58900">Investment</span>]]
+               go <span style="color: #859900">=</span> <span style="color: #2aa198">[]</span> <span style="color: #859900">:</span> fmap bestStrat [<span style="color: #2aa198">1</span><span style="color: #859900">..</span>]</code></pre>
       <p>There is nothing magical about the code above. When demanding <code>go !! 20</code>, for instance, the function bestStrat will be called with the value <math><mn>20</mn></math>, which will demand all possible strategy investments (as defined by our equations). Demanding all combinations will once again require <code>go !! 19</code>, <code>go !! 18</code> and many others, which will repeat the process for a smaller <math><mi>𝑛</mi></math> (the fact that they are smaller is crucial for our recursion to converge).</p>
       <p>What is different from recursion in imperative languages is that go is not a function: it is a list whose values are lazily calculated. As values are demanded from it, they are calculated only once, so you don’t have to worry about what order to evaluate things in. In C# this is sort of like a <code>List&lt;Lazy&lt;Investment[]>></code>.</p>
       <p>This is nice! Still, there are two bad things about this solution:</p>
@@ -521,33 +575,33 @@ bestStrategyBad timeInYears invs' <span style="color: #d73948">=</span> go <span
       <p>So now let’s go and solve issue number 2.</p>
       <h3>More lazy evaluation and a little abstraction</h3>
       <p>So, how can we solve issue number 2? Combining two strategies leads to a strategy with a factor that is the product of the factors of each strategy. There is no need to concatenate lists to discover the best strategy of some given size. To avoid needless work, we need more lazy evaluation. Let’s add some functions to our code and create the <code>bestStrategyGood</code> function:</p>
-      <pre><code data-lang="haskell"><span style="color: #d73948">data</span> <span style="color: #b60157">StrategyCalc</span> <span style="color: #d73948">=</span> <span style="color: #b60157">StrategyCalc</span> [<span style="color: #b60157">Investment</span>] <span style="color: #b60157">Double</span>
+      <pre><code data-lang="haskell"><span style="color: #859900">data</span> StrategyCalc <span style="color: #859900">=</span> StrategyCalc [Investment] Double
 
-factorStrategyGood (<span style="color: #b60157">StrategyCalc</span> _ x) <span style="color: #d73948">=</span> x
+factorStrategyGood (StrategyCalc _ x) <span style="color: #859900">=</span> x
 
-<span style="color: #4b69c6">combine</span> <span style="color: #d73948">::</span> <span style="color: #d73948">StrategyCalc</span> <span style="color: #d73948">-></span> <span style="color: #d73948">StrategyCalc</span> <span style="color: #d73948">-></span> <span style="color: #d73948">StrategyCalc</span>
-combine (<span style="color: #b60157">StrategyCalc</span> s1 f1) (<span style="color: #b60157">StrategyCalc</span> s2 f2) <span style="color: #d73948">=</span> <span style="color: #b60157">StrategyCalc</span> (s1 <span style="color: #d73948">++</span> s2) (f1 * f2)
+<span style="color: #268bd2">combine</span> <span style="color: #859900">::</span> <span style="color: #b58900">StrategyCalc</span> <span style="color: #859900">-></span> <span style="color: #b58900">StrategyCalc</span> <span style="color: #859900">-></span> <span style="color: #b58900">StrategyCalc</span>
+combine (StrategyCalc s1 f1) (StrategyCalc s2 f2) <span style="color: #859900">=</span> StrategyCalc (s1 <span style="color: #859900">++</span> s2) (f1 * f2)
 
-<span style="color: #4b69c6">bestStrategyGood</span> <span style="color: #d73948">::</span> <span style="color: #d73948">Int</span> <span style="color: #d73948">-></span> [<span style="color: #d73948">Investment</span>] <span style="color: #d73948">-></span> [<span style="color: #d73948">Investment</span>]
-bestStrategyGood timeInYears invs' <span style="color: #d73948">=</span> <span style="color: #d73948">let</span> <span style="color: #b60157">StrategyCalc</span> res _ <span style="color: #d73948">=</span> go <span style="color: #d73948">!!</span> timeInYears <span style="color: #d73948">in</span> res
-  <span style="color: #d73948">where</span> invs <span style="color: #d73948">=</span> investmentLeaveInTheBank <span style="color: #d73948">:</span> invs'
-               bestStrat desiredTime <span style="color: #d73948">=</span> withMax1 factorStrategyGood (bestInvestmentWithTimeOr1 desiredTime) (allCombinations desiredTime)
-               bestInvestmentWithTimeOr1 desiredTime <span style="color: #d73948">=</span> <span style="color: #d73948">case</span> withMax factorInvestment <span style="color: #d73948">$</span> filter (<span style="color: #d73948">\</span>i <span style="color: #d73948">-></span> time i <span style="color: #d73948">==</span> desiredTime) invs <span style="color: #d73948">of</span>
-                                                         <span style="color: #b60157">Nothing</span> <span style="color: #d73948">-></span> <span style="color: #b60157">StrategyCalc</span> <span style="color: #d73948">[]</span> <span style="color: #b60157">1</span>
-                                                         <span style="color: #b60157">Just</span> i <span style="color: #d73948">-></span> <span style="color: #b60157">StrategyCalc</span> [i] (factorInvestment i)
-               <span style="color: #74747c">--</span><span style="color: #74747c"> For desiredTime=7 "allCombinations" returns strategies e1 ++ e6, e2 ++ e5 and e3 ++ e4</span>
-               allCombinations desiredTime <span style="color: #d73948">=</span> <span style="color: #d73948">let</span> halfTheTime <span style="color: #d73948">=</span> floor (fromIntegral desiredTime <span style="color: #d73948">/</span> <span style="color: #b60157">2</span>)
-                                             <span style="color: #d73948">in</span> fmap (<span style="color: #d73948">\</span>i <span style="color: #d73948">-></span> combine (go <span style="color: #d73948">!!</span> i) (go <span style="color: #d73948">!!</span> (desiredTime <span style="color: #d73948">-</span> i))) [<span style="color: #b60157">1</span><span style="color: #d73948">..</span>halfTheTime]
-               <span style="color: #4b69c6">go</span> <span style="color: #d73948">::</span> [<span style="color: #d73948">StrategyCalc</span>]
-               go <span style="color: #d73948">=</span> <span style="color: #b60157">StrategyCalc</span> <span style="color: #d73948">[]</span> <span style="color: #b60157">1</span> <span style="color: #d73948">:</span> fmap bestStrat [<span style="color: #b60157">1</span><span style="color: #d73948">..</span>]</code></pre>
+<span style="color: #268bd2">bestStrategyGood</span> <span style="color: #859900">::</span> <span style="color: #b58900">Int</span> <span style="color: #859900">-></span> [<span style="color: #b58900">Investment</span>] <span style="color: #859900">-></span> [<span style="color: #b58900">Investment</span>]
+bestStrategyGood timeInYears invs' <span style="color: #859900">=</span> <span style="color: #859900">let</span> StrategyCalc res _ <span style="color: #859900">=</span> go <span style="color: #859900">!!</span> timeInYears <span style="color: #859900">in</span> res
+  <span style="color: #859900">where</span> invs <span style="color: #859900">=</span> investmentLeaveInTheBank <span style="color: #859900">:</span> invs'
+               bestStrat desiredTime <span style="color: #859900">=</span> withMax1 factorStrategyGood (bestInvestmentWithTimeOr1 desiredTime) (allCombinations desiredTime)
+               bestInvestmentWithTimeOr1 desiredTime <span style="color: #859900">=</span> <span style="color: #859900">case</span> withMax factorInvestment <span style="color: #859900">$</span> filter (<span style="color: #859900">\</span>i <span style="color: #859900">-></span> time i <span style="color: #859900">==</span> desiredTime) invs <span style="color: #859900">of</span>
+                                                         Nothing <span style="color: #859900">-></span> StrategyCalc <span style="color: #2aa198">[]</span> <span style="color: #2aa198">1</span>
+                                                         Just i <span style="color: #859900">-></span> StrategyCalc [i] (factorInvestment i)
+               <span style="color: #657b83">--</span><span style="color: #657b83"> For desiredTime=7 "allCombinations" returns strategies e1 ++ e6, e2 ++ e5 and e3 ++ e4</span>
+               allCombinations desiredTime <span style="color: #859900">=</span> <span style="color: #859900">let</span> halfTheTime <span style="color: #859900">=</span> floor (fromIntegral desiredTime <span style="color: #859900">/</span> <span style="color: #2aa198">2</span>)
+                                             <span style="color: #859900">in</span> fmap (<span style="color: #859900">\</span>i <span style="color: #859900">-></span> combine (go <span style="color: #859900">!!</span> i) (go <span style="color: #859900">!!</span> (desiredTime <span style="color: #859900">-</span> i))) [<span style="color: #2aa198">1</span><span style="color: #859900">..</span>halfTheTime]
+               <span style="color: #268bd2">go</span> <span style="color: #859900">::</span> [<span style="color: #b58900">StrategyCalc</span>]
+               go <span style="color: #859900">=</span> StrategyCalc <span style="color: #2aa198">[]</span> <span style="color: #2aa198">1</span> <span style="color: #859900">:</span> fmap bestStrat [<span style="color: #2aa198">1</span><span style="color: #859900">..</span>]</code></pre>
       <p>Take your time to digest this: the list of investments in each <code>StrategyCalc</code> will only be evaluated when the caller needs it to be evaluated. However, the combine function will create a <code>StrategyCalc</code> whose factor is calculated in constant time when combining two strategies. In fact, you could even have the final factor of the optimal strategy without having ever constructed a non empty list. Nice!</p>
       <h3>A little abstraction (skip to results if you prefer)</h3>
       <p>I thought a nice touch to finish this article would be to introduce an abstraction: the Monoid.</p>
       <p>A Monoid is just a fancy name for a binary operation that is associative and a value that is an identity for this operation. The Int type, the sum function (+) and the value <math><mn>0</mn></math> (zero) form an instance of Monoid, for instance, since any number plus zero equals itself and <math><mrow><mo>(</mo><mrow><mi>𝑎</mi><mo>+</mo><mi>𝑏</mi></mrow><mo>)</mo></mrow><mo>+</mo><mi>𝑐</mi><mo>=</mo><mi>𝑎</mi><mo>+</mo><mrow><mo>(</mo><mrow><mi>𝑏</mi><mo>+</mo><mi>𝑐</mi></mrow><mo>)</mo></mrow></math> for any <math><mi>𝑎</mi><mo>,</mo><mi>𝑏</mi><mo>,</mo><mi>𝑐</mi></math> of type Int.</p>
       <p>The same thing happens with investment strategies! So we can replace the combine function by the Monoidal append:</p>
-      <pre><code data-lang="haskell"><span style="color: #d73948">instance</span> <span style="color: #d73948">Monoid</span> <span style="color: #d73948">StrategyCalc</span> <span style="color: #d73948">where</span>
-  mempty <span style="color: #d73948">=</span> <span style="color: #b60157">StrategyCalc</span> <span style="color: #d73948">[]</span> <span style="color: #b60157">1</span>
-  mappend (<span style="color: #b60157">StrategyCalc</span> i1 f1) (<span style="color: #b60157">StrategyCalc</span> i2 f2) <span style="color: #d73948">=</span> <span style="color: #b60157">StrategyCalc</span> (i1 <span style="color: #d73948">++</span> i2) (f1 * f2)</code></pre>
+      <pre><code data-lang="haskell"><span style="color: #859900">instance</span> <span style="color: #b58900">Monoid</span> <span style="color: #b58900">StrategyCalc</span> <span style="color: #859900">where</span>
+  mempty <span style="color: #859900">=</span> StrategyCalc <span style="color: #2aa198">[]</span> <span style="color: #2aa198">1</span>
+  mappend (StrategyCalc i1 f1) (StrategyCalc i2 f2) <span style="color: #859900">=</span> StrategyCalc (i1 <span style="color: #859900">++</span> i2) (f1 * f2)</code></pre>
       <p>Don’t forget that <code>&lt;></code> is an infix alias for mappend!</p>
       <h3>Results</h3>
       <p>When taking the code for bestStrategyGood and the three investments from the beginning of the article, let us devise the best strategy to maximize gains over the next 11 years:</p>
